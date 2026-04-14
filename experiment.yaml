@@ -7,12 +7,6 @@
 # ============================================================================
 
 name: silicon-coliseum
-owner: deepakpalrocks
-type: web-app
-level: 3
-status: draft
-quality: mvp
-
 description: >
   AI-powered meme coin paper trading arena where users deploy autonomous AI agents
   that trade crypto meme tokens using simulated (paper) money. Users connect their
@@ -20,167 +14,33 @@ description: >
   strategies, and compete on a global P&L leaderboard — all wrapped in a premium
   dark-first glassmorphism UI.
 
-thesis: "If crypto enthusiasts can deploy autonomous AI trading agents with zero financial risk via paper trading, then 20+ users will create at least one agent within 2 weeks, as measured by agent creation events"
-target_user: Crypto enthusiasts and meme coin traders who want to experiment with AI-driven trading strategies without risking real money
-distribution: |
-  Post in crypto Twitter, r/cryptocurrency, r/algotrading.
-  Share in Telegram/Discord meme coin communities.
-  Showcase on Product Hunt and Indie Hackers.
-
-hypotheses:
-  - id: h-01
-    category: demand
-    statement: ">5% of visitors who see the landing page click 'Launch Your Agent'"
-    metric:
-      formula: "cta_click / visit_landing"
-      threshold: 0.05
-      operator: gte
-    priority_score: 90
-    experiment_level: 1
-    depends_on: []
-    status: pending
-  - id: h-02
-    category: activate
-    statement: ">30% of users who connect their wallet create at least one AI agent"
-    metric:
-      formula: "agent_created / signup_complete"
-      threshold: 0.30
-      operator: gte
-    priority_score: 80
-    experiment_level: 2
-    depends_on: [h-01]
-    status: pending
-
-behaviors:
-  - id: b-01
-    hypothesis_id: h-01
-    given: "A crypto enthusiast visits the Silicon Coliseum landing page"
-    when: "They read the value proposition"
-    then: "They click 'Launch Your Agent' CTA (>5% of visitors)"
-    tests:
-      - "Landing page renders without errors"
-      - "CTA button is visible and clickable"
-    level: 1
-  - id: b-02
-    hypothesis_id: h-01
-    given: "A visitor clicks the CTA"
-    when: "They connect their MetaMask wallet"
-    then: "Account is created and they land on the dashboard"
-    tests:
-      - "Wallet connect flow completes"
-      - "User is redirected to dashboard after signup"
-    level: 2
-  - id: b-03
-    hypothesis_id: h-02
-    given: "A signed-up user is on the dashboard"
-    when: "They click 'Create Agent' and configure strategy"
-    then: "An AI agent is created and begins evaluating markets"
-    tests:
-      - "Agent creation form validates input"
-      - "Agent appears in agents tab after creation"
-    level: 2
-  - id: b-04
-    hypothesis_id: h-02
-    given: "An active agent exists"
-    when: "The cron job triggers evaluation"
-    then: "Agent analyzes market data and executes paper trades"
-    tests:
-      - "Trade records appear in trade history"
-      - "Agent holdings update after trades"
-    level: 2
-
-golden_path:
-  - step: "Visit landing page"
-    event: visit_landing
-    page: landing
-  - step: "Click 'Launch Your Agent'"
-    event: cta_click
-    page: landing
-  - step: "Connect MetaMask wallet and register"
-    event: signup_complete
-    page: login
-  - step: "Create an AI trading agent"
-    event: agent_created
-    page: dashboard
-  - step: "View agent performance on leaderboard"
-    event: view_leaderboard
-    page: dashboard
-target_clicks: 4
-
-variants:
-  - slug: arena
-    headline: "The AI Meme Coin Trading Arena"
-    subheadline: "Deploy autonomous AI agents that trade crypto meme tokens with paper money. Zero risk, maximum alpha."
-    cta: "Launch Your Agent"
-    promise: "AI-powered trading without the risk"
-    proof: "Real-time market data from DexScreener across 12 meme tokens"
-    urgency: "The arena is live — deploy your agent now"
-    pain_points:
-      - "Manual trading is stressful and time-consuming"
-      - "Testing strategies with real money is risky"
-      - "Existing paper trading tools lack AI automation"
-  - slug: compete
-    headline: "Compete With AI-Powered Trading Bots"
-    subheadline: "Build your strategy, deploy your agent, climb the leaderboard. No real money needed."
-    cta: "Enter the Arena"
-    promise: "Prove your trading strategy against the best"
-    proof: "Global P&L leaderboard with live DexScreener prices"
-    urgency: "Top agents are already trading — join the competition"
-    pain_points:
-      - "No way to test trading ideas without real risk"
-      - "Hard to compare strategies objectively"
-      - "Algo trading tools are too complex for most traders"
-
-funnel:
-  available_from:
-    reach: L1
-    demand: L1
-    activate: L2
-  decision_framework:
-    scale: "All tested dimensions >= 1.0"
-    kill: "Any top-funnel (REACH or DEMAND) < 0.5"
-    pivot: "2+ dimensions < 0.8"
-    refine: "1+ dimensions < 1.0 but fewer than 2 below 0.8"
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Tech Stack
 # ─────────────────────────────────────────────────────────────────────────────
 stack:
-  services:
-    - name: app
-      runtime: nextjs
-      hosting: vercel
-      ui: shadcn
-      testing: vitest
-  database: supabase
-  auth: supabase
-  # Extended stack details (non-template fields preserved for reference)
-  framework: next@15
-  language: typescript
-  runtime_version: node@20
+  framework: next@15 # Next.js 15 App Router
+  language: typescript # Strict TypeScript throughout
+  runtime: node@20
   styling:
-    engine: tailwindcss@4
+    engine: tailwindcss@4 # CSS-first config via globals.css @theme inline
     utilities: [clsx, tailwind-merge, class-variance-authority]
   components:
-    library: shadcn-ui
+    library: shadcn-ui # "new-york" style variant
     primitives: radix-ui
     icons: lucide-react
   animation: framer-motion@12
+  database: supabase # Auth + Postgres + Row Level Security
   ai:
     provider: groq
     model: llama-3.3-70b-versatile
-    sdk: openai
+    sdk: openai # Groq uses OpenAI-compatible SDK
   blockchain:
     library: ethers@6
     chain: arbitrum-one
     wallet: metamask
   validation: zod
-  scheduling: pg_cron
-
-deploy:
-  url: null
-  repo: null
-  domain: null
+  scheduling: pg_cron # Supabase-native cron via pg_cron or Edge Function cron
+  deployment: vercel
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Design System — Dark-first premium trading aesthetic
