@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Wallet, Copy, ExternalLink, LogOut, Check } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -15,17 +14,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import ThemeToggle from "@/components/theme-toggle";
-import SCTBalanceBadge from "./sct-balance-badge";
 import MarketTicker from "./market-ticker";
 import OverviewTab from "./overview-tab";
 import AgentsTab from "./agents-tab";
 import LeaderboardTab from "./leaderboard-tab";
-import type { User, Agent, Holding, Trade, Decision } from "@/lib/types";
+import ArenasTab from "./arenas-tab";
+import type { User, Agent, Trade, Decision } from "@/lib/types";
 
 interface DashboardClientProps {
   user: User;
   agents: Agent[];
-  holdings: Holding[];
   trades: Trade[];
   decisions: Decision[];
   walletAddress: string;
@@ -34,14 +32,12 @@ interface DashboardClientProps {
 export default function DashboardClient({
   user,
   agents: initialAgents,
-  holdings: initialHoldings,
   trades: initialTrades,
   decisions: initialDecisions,
   walletAddress,
 }: DashboardClientProps) {
   const router = useRouter();
   const [agents, setAgents] = useState(initialAgents);
-  const [holdings] = useState(initialHoldings);
   const [trades] = useState(initialTrades);
   const [decisions] = useState(initialDecisions);
   const [copied, setCopied] = useState(false);
@@ -68,12 +64,14 @@ export default function DashboardClient({
     } catch {}
   }, [user.id]);
 
+  const tabs = ["overview", "agents", "arenas", "leaderboard"];
+
   return (
     <div className="min-h-screen bg-background">
       {/* Sticky Nav */}
       <header className="sticky top-0 z-50 glass border-b border-border/30">
         <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
-          {/* Left: Brand + Tabs (desktop) */}
+          {/* Left: Brand */}
           <div className="flex items-center gap-6">
             <Link href="/" className="text-lg font-bold gradient-text hidden sm:block">
               Silicon Coliseum
@@ -85,7 +83,7 @@ export default function DashboardClient({
 
           {/* Center: Tab navigation (desktop) */}
           <nav className="hidden md:flex items-center gap-1">
-            {["overview", "agents", "leaderboard"].map((tab) => (
+            {tabs.map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -102,7 +100,6 @@ export default function DashboardClient({
 
           {/* Right: Actions */}
           <div className="flex items-center gap-2">
-            <SCTBalanceBadge walletAddress={walletAddress} />
             <ThemeToggle />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -122,12 +119,12 @@ export default function DashboardClient({
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <a
-                    href={`https://arbiscan.io/address/${walletAddress}`}
+                    href={`https://basescan.org/address/${walletAddress}`}
                     target="_blank"
                     rel="noopener noreferrer"
                   >
                     <ExternalLink className="w-4 h-4 mr-2" />
-                    View on Arbiscan
+                    View on BaseScan
                   </a>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
@@ -143,7 +140,7 @@ export default function DashboardClient({
         {/* Mobile tab navigation */}
         <div className="md:hidden border-t border-border/20 overflow-x-auto">
           <div className="flex px-4 gap-1 py-1">
-            {["overview", "agents", "leaderboard"].map((tab) => (
+            {tabs.map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -176,7 +173,6 @@ export default function DashboardClient({
             {activeTab === "overview" && (
               <OverviewTab
                 agents={agents}
-                holdings={holdings}
                 trades={trades}
                 userId={user.id}
                 onRefresh={refreshAgents}
@@ -185,13 +181,16 @@ export default function DashboardClient({
             {activeTab === "agents" && (
               <AgentsTab
                 agents={agents}
-                holdings={holdings}
+                holdings={[]}
                 trades={trades}
                 decisions={decisions}
                 userId={user.id}
                 walletAddress={walletAddress}
                 onRefresh={refreshAgents}
               />
+            )}
+            {activeTab === "arenas" && (
+              <ArenasTab userId={user.id} />
             )}
             {activeTab === "leaderboard" && (
               <LeaderboardTab userId={user.id} />

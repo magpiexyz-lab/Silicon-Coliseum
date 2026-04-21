@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,7 +21,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { TokenInfo } from "@/lib/types";
 
 interface CreateAgentFormProps {
   open: boolean;
@@ -36,46 +35,17 @@ export default function CreateAgentForm({
   walletAddress,
   onCreated,
 }: CreateAgentFormProps) {
-  const [tokens, setTokens] = useState<TokenInfo[]>([]);
   const [name, setName] = useState("");
   const [riskLevel, setRiskLevel] = useState("balanced");
-  const [budget, setBudget] = useState("1000");
-  const [selectedTokens, setSelectedTokens] = useState<string[]>([]);
   const [personality, setPersonality] = useState("");
+  const [strategyDescription, setStrategyDescription] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetch("/api/tokens")
-      .then((r) => r.json())
-      .then((d) => {
-        setTokens(d.tokens || d || []);
-        setSelectedTokens((d.tokens || d || []).map((t: TokenInfo) => t.symbol));
-      })
-      .catch(() => {});
-  }, []);
-
-  function toggleToken(symbol: string) {
-    setSelectedTokens((prev) =>
-      prev.includes(symbol)
-        ? prev.filter((s) => s !== symbol)
-        : [...prev, symbol]
-    );
-  }
 
   async function handleSubmit() {
     setError(null);
     if (name.length < 2 || name.length > 30) {
       setError("Name must be 2-30 characters");
-      return;
-    }
-    if (selectedTokens.length === 0) {
-      setError("Select at least one token");
-      return;
-    }
-    const budgetNum = parseFloat(budget);
-    if (isNaN(budgetNum) || budgetNum < 10 || budgetNum > 100000) {
-      setError("Budget must be $10 - $100,000");
       return;
     }
 
@@ -87,16 +57,15 @@ export default function CreateAgentForm({
         body: JSON.stringify({
           name,
           risk_level: riskLevel,
-          initial_budget: budgetNum,
-          tokens: selectedTokens,
           personality: personality || undefined,
+          strategy_description: strategyDescription || undefined,
         }),
       });
 
       if (res.ok) {
         setName("");
-        setBudget("1000");
         setPersonality("");
+        setStrategyDescription("");
         setRiskLevel("balanced");
         onCreated();
       } else {
@@ -116,7 +85,7 @@ export default function CreateAgentForm({
         <DialogHeader>
           <DialogTitle>Create AI Agent</DialogTitle>
           <DialogDescription>
-            Deploy a new autonomous trading agent
+            Deploy a new autonomous trading agent for arena competitions
           </DialogDescription>
         </DialogHeader>
 
@@ -158,35 +127,19 @@ export default function CreateAgentForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="budget">Initial Budget (USD)</Label>
-            <Input
-              id="budget"
-              type="number"
-              min={10}
-              max={100000}
-              value={budget}
-              onChange={(e) => setBudget(e.target.value)}
+            <Label htmlFor="strategy-description">
+              Strategy Description
+            </Label>
+            <Textarea
+              id="strategy-description"
+              placeholder="Describe your agent's trading strategy (e.g., 'Buy dips on high-volume tokens, sell when momentum fades')..."
+              value={strategyDescription}
+              onChange={(e) => setStrategyDescription(e.target.value)}
+              rows={3}
             />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Tokens to Trade ({selectedTokens.length} selected)</Label>
-            <div className="flex flex-wrap gap-2">
-              {tokens.map((token) => (
-                <button
-                  key={token.symbol}
-                  type="button"
-                  onClick={() => toggleToken(token.symbol)}
-                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors border ${
-                    selectedTokens.includes(token.symbol)
-                      ? "bg-primary/20 border-primary/50 text-primary"
-                      : "bg-muted/30 border-border/30 text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {token.symbol}
-                </button>
-              ))}
-            </div>
+            <p className="text-xs text-muted-foreground">
+              Guide your agent&apos;s decision-making with a strategy description
+            </p>
           </div>
 
           <div className="space-y-2">

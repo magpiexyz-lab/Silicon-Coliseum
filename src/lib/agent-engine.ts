@@ -2,110 +2,127 @@ import OpenAI from "openai";
 import { z } from "zod";
 import type {
   Agent,
-  Holding,
-  Trade,
-  MarketData,
-  SentimentData,
-  AIDecisionResponse,
+  ArenaBalance,
+  Pool,
+  PoolAnalysis,
+  ArenaTrade,
+  ArenaAIDecisionResponse,
 } from "./types";
+import { calculatePrice } from "./amm";
 
-const groq = new OpenAI({
-  baseURL: "https://api.groq.com/openai/v1",
-  apiKey: process.env.GROQ_API_KEY || "",
+const cerebras = new OpenAI({
+  baseURL: "https://api.cerebras.ai/v1",
+  apiKey: process.env.CEREBRAS_API_KEY || "",
 });
 
 const RISK_PROFILES: Record<Agent["risk_level"], string> = {
   conservative:
-    "Focus on established tokens, smaller positions (5-15% of budget), high confidence threshold (0.7+). Only trade when signals are very strong. Prefer preservation of capital.",
+    "Focus on established pools, smaller positions (5-15% of balance), high confidence threshold. Only trade when signals are very strong. Prefer preservation of capital.",
   balanced:
-    "Mix of established and trending tokens, moderate positions (10-25% of budget), medium confidence threshold (0.5+). Balance risk and reward.",
+    "Mix of pools, moderate positions (10-25% of balance), medium confidence threshold. Balance risk and reward across multiple pools.",
   aggressive:
-    "Trend-chasing strategy, larger positions (15-40% of budget), lower confidence threshold (0.3+). Trade frequently on momentum signals.",
+    "Trend-chasing strategy, larger positions (15-40% of balance), lower confidence threshold. Trade frequently on momentum signals.",
   degen:
-    "Maximum risk tolerance, massive positions (up to 50% of budget), trade on any signal. YOLO mentality. Chase the biggest movers regardless of risk.",
+    "Maximum risk tolerance, massive positions (up to 50% of balance), trade on any signal. YOLO mentality. Chase the biggest movers.",
 };
 
-const AITradeActionSchema = z.object({
-  action: z.enum(["BUY", "SELL"]),
-  token: z.string(),
-  amount_usd: z.number().positive(),
-  confidence: z.number().min(0).max(1),
-  urgency: z.enum(["low", "medium", "high"]),
+const ArenaTradeActionSchema = z.object({
+  pool_id: z.string(),
+  token_in: z.string(),
+  token_out: z.string(),
+  amount_in: z.number().positive(),
   reason: z.string(),
 });
 
-const AIDecisionSchema = z.object({
+const ArenaAIDecisionSchema = z.object({
   should_trade: z.boolean(),
   reasoning: z.string(),
   market_analysis: z.string(),
-  actions: z.array(AITradeActionSchema),
+  actions: z.array(ArenaTradeActionSchema),
 });
 
-function buildPrompt(
+function buildArenaPrompt(
   agent: Agent,
-  holdings: Holding[],
-  recentTrades: Trade[],
-  marketData: Map<string, MarketData>,
-  sentimentData: Map<string, SentimentData>
+  balances: ArenaBalance[],
+  pools: Pool[],
+  poolAnalyses: PoolAnalysis[],
+  recentTrades: ArenaTrade[],
+  tokenSymbolMap: Map<string, string>
 ): string {
-  const holdingsText = holdings
-    .map((h) => {
-      const price = marketData.get(h.token)?.price ?? 0;
-      const value = h.amount * price;
-      const pnl =
-        h.avg_buy_price > 0
-          ? ((price - h.avg_buy_price) / h.avg_buy_price) * 100
-          : 0;
-      return `  - ${h.token}: ${h.amount.toFixed(6)} tokens, avg buy $${h.avg_buy_price.toFixed(6)}, current $${price.toFixed(6)}, value $${value.toFixed(2)}, P&L ${pnl.toFixed(2)}%`;
+  // Format balances
+  const balancesText = balances
+    .filter((b) => b.amount > 0)
+    .map((b) => {
+      const symbol = tokenSymbolMap.get(b.token_id) || b.token_id;
+      return `  - ${symbol}: ${b.amount.toFixed(4)}`;
     })
     .join("\n");
 
-  const marketText = agent.tokens
-    .map((symbol) => {
-      const md = marketData.get(symbol);
-      const sd = sentimentData.get(symbol);
-      if (!md) return `  - ${symbol}: No market data available`;
-      return `  - ${symbol}: $${md.price.toFixed(6)} | 5m: ${md.priceChange5m}% | 1h: ${md.priceChange1h}% | 6h: ${md.priceChange6h}% | 24h: ${md.priceChange24h}% | Vol: $${md.volume24h.toLocaleString()} | Liq: $${md.liquidity.toLocaleString()} | Sentiment: ${sd?.sentimentScore?.toFixed(2) ?? "N/A"} | Buzz: ${sd?.buzzLevel ?? "N/A"}/10 | Themes: ${sd?.keyThemes?.join(", ") ?? "N/A"}`;
+  // Format pools with prices
+  const poolsText = pools
+    .map((p) => {
+      const price = calculatePrice(p.reserve_a, p.reserve_b);
+      const symbolA = p.token_a_symbol || tokenSymbolMap.get(p.token_a) || "?";
+      const symbolB = p.token_b_symbol || tokenSymbolMap.get(p.token_b) || "?";
+      const analysis = poolAnalyses.find((a) => a.poolId === p.id);
+      return `  - Pool ${p.id.slice(0, 8)}: ${symbolA}/${symbolB} | Price: ${price.toFixed(6)} | Reserves: ${p.reserve_a.toFixed(2)}/${p.reserve_b.toFixed(2)} | Fee: ${(p.fee_rate * 100).toFixed(1)}%${
+        analysis
+          ? ` | 1h: ${analysis.priceChange1h.toFixed(2)}% | 24h: ${analysis.priceChange24h.toFixed(2)}% | Momentum: ${analysis.momentum.toFixed(2)} | Vol: ${analysis.volume24h.toFixed(2)}`
+          : ""
+      }${analysis?.narrative ? `\n    Narrative: ${analysis.narrative}` : ""}`;
     })
     .join("\n");
 
-  const recentTradesText =
+  // Format recent trades
+  const tradesText =
     recentTrades.length > 0
       ? recentTrades
           .slice(0, 10)
-          .map(
-            (t) =>
-              `  - ${t.action} ${t.token}: $${t.amount_usd.toFixed(2)} at $${t.price.toFixed(6)} (confidence: ${t.confidence.toFixed(2)})`
-          )
+          .map((t) => {
+            const inSym = tokenSymbolMap.get(t.token_in) || "?";
+            const outSym = tokenSymbolMap.get(t.token_out) || "?";
+            return `  - Swapped ${t.amount_in.toFixed(4)} ${inSym} -> ${t.amount_out.toFixed(4)} ${outSym} (price: ${t.price.toFixed(6)})`;
+          })
           .join("\n")
       : "  None";
 
-  return `You are an AI trading agent named "${agent.name}" managing a paper trading portfolio.
+  // Build pool ID -> token info map for the AI
+  const poolRef = pools
+    .map((p) => {
+      const symbolA = p.token_a_symbol || tokenSymbolMap.get(p.token_a) || "?";
+      const symbolB = p.token_b_symbol || tokenSymbolMap.get(p.token_b) || "?";
+      return `  ${p.id}: ${symbolA}(${p.token_a}) / ${symbolB}(${p.token_b})`;
+    })
+    .join("\n");
+
+  return `You are an AI trading agent named "${agent.name}" competing in a virtual DeFi arena.
+You trade in AMM liquidity pools using a constant product formula (x*y=k).
 
 RISK PROFILE: ${agent.risk_level.toUpperCase()}
 ${RISK_PROFILES[agent.risk_level]}
+${agent.personality ? `\nCUSTOM STRATEGY: ${agent.personality}` : ""}
+${agent.strategy_description ? `\nSTRATEGY DESCRIPTION: ${agent.strategy_description}` : ""}
 
-CURRENT PORTFOLIO STATE:
-- Cash Balance: $${agent.current_balance.toFixed(2)}
-- Initial Budget: $${agent.initial_budget.toFixed(2)}
-- Watchlist Tokens: ${agent.tokens.join(", ")}
+YOUR CURRENT BALANCES:
+${balancesText || "  No balances"}
 
-CURRENT HOLDINGS:
-${holdingsText || "  None (all cash)"}
+AVAILABLE POOLS:
+${poolsText}
 
-MARKET DATA & SENTIMENT:
-${marketText}
+POOL REFERENCE (pool_id: tokenA(id) / tokenB(id)):
+${poolRef}
 
 RECENT TRADES (last 10):
-${recentTradesText}
+${tradesText}
 
-Based on the above data, decide whether to make any trades. Consider:
+Based on the above data, decide whether to make any swaps. Consider:
 1. Your risk profile and position sizing rules
-2. Current portfolio allocation and diversification
-3. Market momentum (price changes across timeframes)
-4. Sentiment analysis scores and themes
+2. Current balance allocation across tokens
+3. Pool momentum and price trends
+4. Volatility and trading volume
 5. Recent trade history to avoid overtrading
-6. Available cash for new positions
+6. Price impact — larger trades have more slippage in AMM pools
+7. Diversification across multiple pools
 
 Respond ONLY with a JSON object in this exact format (no markdown, no explanation):
 {
@@ -114,44 +131,44 @@ Respond ONLY with a JSON object in this exact format (no markdown, no explanatio
   "market_analysis": "<brief market analysis>",
   "actions": [
     {
-      "action": "BUY" or "SELL",
-      "token": "<token symbol>",
-      "amount_usd": <dollar amount>,
-      "confidence": <0 to 1>,
-      "urgency": "low" | "medium" | "high",
+      "pool_id": "<pool UUID>",
+      "token_in": "<token symbol you are selling>",
+      "token_out": "<token symbol you are buying>",
+      "amount_in": <amount of token_in to swap>,
       "reason": "<why this specific trade>"
     }
   ]
 }
 
 If you decide not to trade, set should_trade to false and actions to an empty array.
-Only include tokens from the watchlist: ${agent.tokens.join(", ")}.
-For SELL actions, only sell tokens you currently hold.
-For BUY actions, do not exceed the available cash balance of $${agent.current_balance.toFixed(2)}.`;
+Only use pool IDs and token symbols from the data above.
+Do not swap more than your current balance of any token.`;
 }
 
-export async function evaluateAgent(
+export async function evaluateArenaAgent(
   agent: Agent,
-  holdings: Holding[],
-  recentTrades: Trade[],
-  marketData: Map<string, MarketData>,
-  sentimentData: Map<string, SentimentData>
-): Promise<AIDecisionResponse> {
+  balances: ArenaBalance[],
+  pools: Pool[],
+  poolAnalyses: PoolAnalysis[],
+  recentTrades: ArenaTrade[],
+  tokenSymbolMap: Map<string, string>
+): Promise<ArenaAIDecisionResponse> {
   try {
-    const prompt = buildPrompt(
+    const prompt = buildArenaPrompt(
       agent,
-      holdings,
+      balances,
+      pools,
+      poolAnalyses,
       recentTrades,
-      marketData,
-      sentimentData
+      tokenSymbolMap
     );
 
     const systemPrompt = agent.personality
-      ? `You are an AI crypto trading agent. You make paper trading decisions based on market data and sentiment. ${agent.personality}`
-      : "You are an AI crypto trading agent. You make paper trading decisions based on market data and sentiment. Respond only with valid JSON.";
+      ? `You are an AI DeFi trading agent in a virtual arena. You make trading decisions by swapping tokens in AMM pools. ${agent.personality}`
+      : "You are an AI DeFi trading agent in a virtual arena. You make trading decisions by swapping tokens in AMM pools. Respond only with valid JSON.";
 
-    const response = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
+    const response = await cerebras.chat.completions.create({
+      model: "llama-3.3-70b",
       temperature: 0.7,
       max_tokens: 1500,
       messages: [
@@ -165,7 +182,7 @@ export async function evaluateAgent(
       throw new Error("Empty response from AI");
     }
 
-    // Try to parse JSON response - handle potential markdown code blocks
+    // Parse JSON response — handle potential markdown code blocks
     let jsonStr = content;
     const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
     if (jsonMatch) {
@@ -173,11 +190,11 @@ export async function evaluateAgent(
     }
 
     const parsed = JSON.parse(jsonStr);
-    const validated = AIDecisionSchema.parse(parsed);
+    const validated = ArenaAIDecisionSchema.parse(parsed);
 
     return validated;
   } catch (error) {
-    console.error(`Agent evaluation failed for ${agent.name}:`, error);
+    console.error(`Arena agent evaluation failed for ${agent.name}:`, error);
     return {
       should_trade: false,
       reasoning: "Failed to parse AI response",
