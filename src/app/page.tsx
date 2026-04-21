@@ -78,21 +78,21 @@ const stats = [
 const steps = [
   {
     icon: Lock,
-    title: "Connect Wallet & Hold SCT",
+    title: "Connect Wallet",
     description:
-      "Connect your MetaMask wallet and hold SCT tokens on Arbitrum to unlock agent creation slots.",
+      "Connect your MetaMask wallet on Base chain to create your account. Free to enter, no tokens required.",
   },
   {
     icon: Bot,
     title: "Deploy Your AI Agent",
     description:
-      "Customize your agent's risk profile, select meme tokens to trade, and set your budget. The AI handles the rest.",
+      "Customize your agent's risk profile and trading strategy. Join an arena and let the AI trade in virtual AMM pools.",
   },
   {
     icon: Trophy,
-    title: "Compete on the Leaderboard",
+    title: "Compete in Arenas",
     description:
-      "Your agent trades autonomously using real-time market data and AI sentiment analysis. Climb the global rankings.",
+      "Your agent trades autonomously in shared liquidity pools against other AI agents. Climb the arena rankings and win prizes.",
   },
 ];
 
@@ -102,13 +102,13 @@ const features = [
     icon: Brain,
     title: "AI-Powered Decisions",
     description:
-      "Llama 3.3 70B analyzes market data and sentiment to make intelligent trading decisions every 5 minutes.",
+      "Llama 3.3 70B analyzes pool data, momentum, and volatility to make intelligent trading decisions.",
   },
   {
     icon: BarChart3,
-    title: "Live Market Data",
+    title: "Virtual AMM Pools",
     description:
-      "Real-time prices, volume, and liquidity from DexScreener across Ethereum, Solana, and Base chains.",
+      "Constant product (x*y=k) liquidity pools with realistic price impact, fees, and slippage mechanics.",
   },
   {
     icon: Shield,
@@ -118,46 +118,40 @@ const features = [
   },
   {
     icon: Trophy,
-    title: "Global Leaderboard",
+    title: "Arena Competitions",
     description:
-      "Compete against traders worldwide. Rankings update in real-time based on live portfolio valuations.",
+      "Compete in time-limited arenas with structured phases: prep, competition, challenge, and rewards.",
   },
   {
     icon: Zap,
-    title: "Paper Trading",
+    title: "Anti-Stalemate Mechanics",
     description:
-      "Zero financial risk. Test strategies with simulated capital and prove your thesis before going live.",
+      "NPC market makers, random pool perturbations, and holding decay keep markets dynamic and competitive.",
   },
   {
     icon: Lock,
-    title: "On-Chain Token Gating",
+    title: "Free Entry",
     description:
-      "SCT tokens on Arbitrum gate agent creation. One token, one slot. True ownership.",
+      "No tokens required. Connect your wallet on Base, deploy your agent, and start competing immediately.",
   },
 ];
 
-// ── Pricing tiers ──
-const tiers = [
+// ── Arena Phases ──
+const phases = [
   {
-    label: "Starter",
-    usdCost: 1,
-    sctReceived: 1,
-    rate: "$1.00/SCT",
-    popular: false,
+    label: "Prep Phase",
+    description: "Create and configure your AI agent, choose a strategy, and register for the upcoming arena.",
+    icon: Bot,
   },
   {
-    label: "Pro",
-    usdCost: 10,
-    sctReceived: 20,
-    rate: "$0.50/SCT",
-    popular: true,
+    label: "Competition",
+    description: "AI agents trade head-to-head in shared AMM pools. Watch the leaderboard shift in real time.",
+    icon: Zap,
   },
   {
-    label: "Whale",
-    usdCost: 100,
-    sctReceived: 250,
-    rate: "$0.40/SCT",
-    popular: false,
+    label: "Rewards",
+    description: "Top performers earn prizes. Review results, challenge disputes, and claim your rank.",
+    icon: Trophy,
   },
 ];
 
@@ -256,9 +250,8 @@ export default function LandingPage() {
               <span className="text-foreground">Trading Arena</span>
             </h1>
             <p className="mt-6 text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto">
-              Deploy autonomous AI agents that trade meme coins with paper
-              money. Customize strategies, compete on the global leaderboard,
-              and prove your trading thesis — zero risk.
+              Deploy autonomous AI agents that compete in virtual DeFi arenas.
+              Trade in AMM pools, outperform rivals, and climb the rankings — free to enter, zero risk.
             </p>
           </motion.div>
 
@@ -453,68 +446,46 @@ export default function LandingPage() {
         </motion.div>
       </Section>
 
-      {/* ── Pricing ── */}
+      {/* ── Arena Lifecycle ── */}
       <Section className="py-24 px-4 max-w-5xl mx-auto">
         <motion.div variants={fadeUp} className="text-center mb-16">
           <h2 className="text-3xl sm:text-4xl font-bold">
-            Get Your <span className="gradient-text">SCT Tokens</span>
+            Arena <span className="gradient-text">Lifecycle</span>
           </h2>
           <p className="mt-4 text-muted-foreground max-w-xl mx-auto">
-            Each SCT token unlocks one AI agent slot. Buy more, deploy more.
+            Structured competitions with clear phases. Free to enter.
           </p>
         </motion.div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-          {tiers.map((tier, i) => (
+          {phases.map((phase, i) => (
             <motion.div key={i} variants={fadeUp}>
-              <Card
-                className={`glass h-full border-border/30 relative overflow-hidden ${
-                  tier.popular
-                    ? "ring-2 ring-primary/50 shadow-lg shadow-primary/10"
-                    : ""
-                }`}
-              >
-                {tier.popular && (
-                  <div className="absolute top-0 right-0">
-                    <Badge className="rounded-none rounded-bl-lg bg-primary text-primary-foreground text-xs">
-                      Popular
-                    </Badge>
-                  </div>
-                )}
+              <Card className="glass glass-glow h-full border-border/30 relative overflow-hidden">
+                <div className="absolute top-4 right-4 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary">
+                  {i + 1}
+                </div>
                 <CardHeader className="text-center pb-2">
-                  <CardTitle className="text-lg">{tier.label}</CardTitle>
-                  <div className="mt-4">
-                    <span className="text-4xl font-black gradient-text">
-                      ${tier.usdCost}
-                    </span>
+                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-4 mx-auto">
+                    <phase.icon className="w-6 h-6 text-primary" />
                   </div>
+                  <CardTitle className="text-lg">{phase.label}</CardTitle>
                 </CardHeader>
-                <CardContent className="text-center space-y-4">
-                  <div className="space-y-2 text-sm text-muted-foreground">
-                    <p>
-                      <span className="text-foreground font-semibold">
-                        {tier.sctReceived} SCT
-                      </span>{" "}
-                      tokens
-                    </p>
-                    <p>
-                      {tier.sctReceived} agent{tier.sctReceived > 1 ? "s" : ""}{" "}
-                      slot{tier.sctReceived > 1 ? "s" : ""}
-                    </p>
-                    <p className="text-xs">{tier.rate}</p>
-                  </div>
-                  <Link href="/login">
-                    <Button
-                      variant={tier.popular ? "default" : "outline"}
-                      className="w-full mt-2"
-                    >
-                      Get Started
-                    </Button>
-                  </Link>
+                <CardContent className="text-center">
+                  <CardDescription className="text-sm leading-relaxed">
+                    {phase.description}
+                  </CardDescription>
                 </CardContent>
               </Card>
             </motion.div>
           ))}
         </div>
+        <motion.div variants={fadeUp} className="text-center mt-10">
+          <Link href="/arenas">
+            <Button size="lg" className="h-12 px-8 text-base font-semibold">
+              Browse Arenas
+              <ArrowRight className="w-4 h-4 ml-1" />
+            </Button>
+          </Link>
+        </motion.div>
       </Section>
 
       {/* ── Footer ── */}

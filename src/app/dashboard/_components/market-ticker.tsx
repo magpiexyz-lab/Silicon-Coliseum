@@ -1,55 +1,66 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { MarketData } from "@/lib/types";
+
+interface PoolPrice {
+  poolId: string;
+  tokenA: string;
+  tokenB: string;
+  price: number;
+}
 
 export default function MarketTicker() {
-  const [prices, setPrices] = useState<Record<string, MarketData>>({});
+  const [pools, setPools] = useState<PoolPrice[]>([]);
 
   useEffect(() => {
-    fetch("/api/tokens/prices")
-      .then((r) => r.json())
-      .then((d) => setPrices(d.prices || d || {}))
-      .catch(() => {});
-
-    const interval = setInterval(() => {
-      fetch("/api/tokens/prices")
+    function fetchPools() {
+      fetch("/api/pools")
         .then((r) => r.json())
-        .then((d) => setPrices(d.prices || d || {}))
+        .then((d) => {
+          const items: PoolPrice[] = (d.pools || d || []).map(
+            (p: {
+              id: string;
+              token_a_symbol?: string;
+              token_b_symbol?: string;
+              reserve_a: number;
+              reserve_b: number;
+            }) => ({
+              poolId: p.id,
+              tokenA: p.token_a_symbol || "???",
+              tokenB: p.token_b_symbol || "???",
+              price:
+                p.reserve_a > 0 ? p.reserve_b / p.reserve_a : 0,
+            })
+          );
+          setPools(items);
+        })
         .catch(() => {});
-    }, 60000);
+    }
 
+    fetchPools();
+    const interval = setInterval(fetchPools, 60000);
     return () => clearInterval(interval);
   }, []);
 
-  const tokens = Object.values(prices);
-  if (tokens.length === 0) return null;
+  if (pools.length === 0) return null;
 
-  const doubled = [...tokens, ...tokens];
+  const doubled = [...pools, ...pools];
 
   return (
     <div className="border-b border-border/20 bg-card/30 overflow-hidden">
       <div className="flex animate-marquee whitespace-nowrap py-2">
-        {doubled.map((token, i) => (
+        {doubled.map((pool, i) => (
           <div
-            key={`${token.symbol}-${i}`}
+            key={`${pool.poolId}-${i}`}
             className="inline-flex items-center gap-2 mx-6 text-xs"
           >
             <span className="font-semibold text-foreground">
-              {token.symbol}
+              {pool.tokenA}/{pool.tokenB}
             </span>
-            <span className="text-muted-foreground">
-              ${token.price < 0.01 ? token.price.toFixed(6) : token.price.toFixed(4)}
-            </span>
-            <span
-              className={
-                token.priceChange24h >= 0
-                  ? "text-emerald-400"
-                  : "text-red-400"
-              }
-            >
-              {token.priceChange24h >= 0 ? "+" : ""}
-              {token.priceChange24h?.toFixed(1)}%
+            <span className="text-muted-foreground font-mono">
+              {pool.price < 0.01
+                ? pool.price.toFixed(6)
+                : pool.price.toFixed(4)}
             </span>
           </div>
         ))}

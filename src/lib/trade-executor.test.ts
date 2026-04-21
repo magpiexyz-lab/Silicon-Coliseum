@@ -1,293 +1,125 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import type { Agent, AITradeAction, MarketData } from "./types";
 
-// Mock supabase-server
-const mockFrom = vi.fn();
-const mockSelect = vi.fn();
-const mockInsert = vi.fn();
-const mockUpdate = vi.fn();
-const mockDelete = vi.fn();
-const mockEq = vi.fn();
-const mockMaybeSingle = vi.fn();
-const mockSingle = vi.fn();
-
-vi.mock("./supabase-server", () => ({
-  createServiceClient: () => ({
-    from: mockFrom,
+// Mock pool-manager
+vi.mock("./pool-manager", () => ({
+  executeSwap: vi.fn().mockResolvedValue({
+    trade: {
+      id: "trade-1",
+      arena_id: "arena-1",
+      pool_id: "pool-1",
+      agent_id: "agent-1",
+      token_in: "token-usdc",
+      token_out: "token-alpha",
+      amount_in: 100,
+      amount_out: 19.5,
+      price: 5.128,
+      fee: 0.3,
+      reasoning: "Bullish momentum",
+      created_at: "2024-01-01",
+    },
+    swapResult: {
+      amountOut: 19.5,
+      fee: 0.3,
+      priceImpact: 0.01,
+      executionPrice: 5.128,
+      newReserveIn: 50100,
+      newReserveOut: 9980.5,
+    },
   }),
 }));
 
-const { executeTrades } = await import("./trade-executor");
+import { executeArenaTrades } from "./trade-executor";
+import type { ArenaTradeAction, Pool } from "./types";
 
-const baseAgent: Agent = {
-  id: "agent-1",
-  user_id: "user-1",
-  name: "Test Agent",
-  risk_level: "balanced",
-  initial_budget: 1000,
-  current_balance: 500,
-  tokens: ["PEPE", "WIF"],
-  is_active: true,
-  personality: null,
-  created_at: "2024-01-01",
-};
-
-const basePrices = new Map<string, MarketData>([
-  [
-    "PEPE",
+describe("Arena Trade Executor", () => {
+  const mockPools: Pool[] = [
     {
-      symbol: "PEPE",
-      name: "Pepe",
-      price: 0.00001,
-      priceChange5m: 0,
-      priceChange1h: 0,
-      priceChange6h: 0,
-      priceChange24h: 0,
-      volume24h: 0,
-      liquidity: 0,
-      marketCap: 0,
-      fdv: 0,
+      id: "pool-1",
+      arena_id: "arena-1",
+      token_a: "token-alpha",
+      token_b: "token-usdc",
+      reserve_a: 10000,
+      reserve_b: 50000,
+      fee_rate: 0.003,
+      total_volume: 100000,
+      created_at: "2024-01-01",
+      updated_at: "2024-01-01",
     },
-  ],
-  [
-    "WIF",
-    {
-      symbol: "WIF",
-      name: "dogwifhat",
-      price: 2.5,
-      priceChange5m: 0,
-      priceChange1h: 0,
-      priceChange6h: 0,
-      priceChange24h: 0,
-      volume24h: 0,
-      liquidity: 0,
-      marketCap: 0,
-      fdv: 0,
-    },
-  ],
-]);
+  ];
 
-beforeEach(() => {
-  vi.clearAllMocks();
-});
+  const symbolToIdMap = new Map([
+    ["USDC", "token-usdc"],
+    ["ALPHA", "token-alpha"],
+  ]);
 
-// Helper to set up mock chain for a specific flow
-function setupMockChain() {
-  // This creates a flexible mock chain
-  const chain: Record<string, ReturnType<typeof vi.fn>> = {
-    from: mockFrom,
-    select: mockSelect,
-    insert: mockInsert,
-    update: mockUpdate,
-    delete: mockDelete,
-    eq: mockEq,
-    maybeSingle: mockMaybeSingle,
-    single: mockSingle,
-  };
-
-  mockFrom.mockReturnValue({
-    select: mockSelect,
-    insert: mockInsert,
-    update: mockUpdate,
-    delete: mockDelete,
+  beforeEach(() => {
+    vi.clearAllMocks();
   });
 
-  mockSelect.mockReturnValue({
-    eq: mockEq,
-    single: mockSingle,
-  });
-
-  mockInsert.mockReturnValue({
-    select: vi.fn().mockReturnValue({
-      single: mockSingle,
-    }),
-    error: null,
-  });
-
-  mockUpdate.mockReturnValue({
-    eq: mockEq,
-  });
-
-  mockDelete.mockReturnValue({
-    eq: mockEq,
-  });
-
-  mockEq.mockReturnValue({
-    eq: mockEq,
-    maybeSingle: mockMaybeSingle,
-    single: mockSingle,
-    select: vi.fn().mockReturnValue({
-      single: mockSingle,
-    }),
-    error: null,
-  });
-
-  return chain;
-}
-
-describe("executeTrades", () => {
-  it("returns empty array when no actions provided", async () => {
-    const result = await executeTrades(baseAgent, [], basePrices);
-    expect(result).toEqual([]);
-  });
-
-  it("skips trades for tokens with no price data", async () => {
-    const actions: AITradeAction[] = [
+  it("should execute trades through pool manager", async () => {
+    const actions: ArenaTradeAction[] = [
       {
-        action: "BUY",
-        token: "UNKNOWN",
-        amount_usd: 100,
-        confidence: 0.8,
-        urgency: "medium",
+        pool_id: "pool-1",
+        token_in: "USDC",
+        token_out: "ALPHA",
+        amount_in: 100,
+        reason: "Bullish momentum",
+      },
+    ];
+
+    const trades = await executeArenaTrades(
+      "arena-1",
+      "agent-1",
+      actions,
+      mockPools,
+      symbolToIdMap
+    );
+
+    expect(trades).toHaveLength(1);
+    expect(trades[0].amount_in).toBe(100);
+  });
+
+  it("should skip trades with unknown tokens", async () => {
+    const actions: ArenaTradeAction[] = [
+      {
+        pool_id: "pool-1",
+        token_in: "UNKNOWN",
+        token_out: "ALPHA",
+        amount_in: 100,
         reason: "test",
       },
     ];
 
-    const result = await executeTrades(baseAgent, actions, basePrices);
-    expect(result).toEqual([]);
+    const trades = await executeArenaTrades(
+      "arena-1",
+      "agent-1",
+      actions,
+      mockPools,
+      symbolToIdMap
+    );
+
+    expect(trades).toHaveLength(0);
   });
 
-  it("skips BUY when insufficient cash", async () => {
-    const agent = { ...baseAgent, current_balance: 50 };
-    const actions: AITradeAction[] = [
+  it("should find pool by token pair when pool_id doesn't match", async () => {
+    const actions: ArenaTradeAction[] = [
       {
-        action: "BUY",
-        token: "WIF",
-        amount_usd: 100,
-        confidence: 0.8,
-        urgency: "medium",
+        pool_id: "nonexistent-pool",
+        token_in: "USDC",
+        token_out: "ALPHA",
+        amount_in: 50,
         reason: "test",
       },
     ];
 
-    const result = await executeTrades(agent, actions, basePrices);
-    expect(result).toEqual([]);
-  });
+    const trades = await executeArenaTrades(
+      "arena-1",
+      "agent-1",
+      actions,
+      mockPools,
+      symbolToIdMap
+    );
 
-  it("executes a BUY trade for a new holding", async () => {
-    setupMockChain();
-
-    // No existing holding
-    mockMaybeSingle.mockResolvedValueOnce({ data: null, error: null });
-
-    // Insert holding succeeds
-    const mockInsertSelect = vi.fn().mockReturnValue({
-      single: vi.fn().mockResolvedValue({ data: null, error: null }),
-    });
-    mockInsert.mockReturnValueOnce({ error: null }); // holding insert
-    mockUpdate.mockReturnValue({ eq: vi.fn().mockReturnValue({ error: null }) }); // balance update
-
-    // Insert trade
-    const tradeSingle = vi.fn().mockResolvedValue({
-      data: {
-        id: "trade-1",
-        agent_id: "agent-1",
-        action: "BUY",
-        token: "WIF",
-        amount_usd: 100,
-        price: 2.5,
-        token_amount: 40,
-        confidence: 0.8,
-        reasoning: "test buy",
-        created_at: "2024-01-01",
-      },
-      error: null,
-    });
-    mockInsert
-      .mockReturnValueOnce({ error: null }) // holding insert
-      .mockReturnValueOnce({
-        select: vi.fn().mockReturnValue({ single: tradeSingle }),
-      }); // trade insert
-
-    // Re-setup from to use the above
-    let callCount = 0;
-    mockFrom.mockImplementation(() => {
-      callCount++;
-      if (callCount === 1) {
-        // holdings select
-        return {
-          select: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({
-              eq: vi.fn().mockReturnValue({
-                maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
-              }),
-            }),
-          }),
-        };
-      }
-      if (callCount === 2) {
-        // holdings insert
-        return {
-          insert: vi.fn().mockReturnValue({ error: null }),
-        };
-      }
-      if (callCount === 3) {
-        // agent balance update
-        return {
-          update: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({ error: null }),
-          }),
-        };
-      }
-      if (callCount === 4) {
-        // trade insert
-        return {
-          insert: vi.fn().mockReturnValue({
-            select: vi.fn().mockReturnValue({ single: tradeSingle }),
-          }),
-        };
-      }
-      return {
-        select: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({ maybeSingle: vi.fn() }),
-        }),
-      };
-    });
-
-    const actions: AITradeAction[] = [
-      {
-        action: "BUY",
-        token: "WIF",
-        amount_usd: 100,
-        confidence: 0.8,
-        urgency: "medium",
-        reason: "test buy",
-      },
-    ];
-
-    const result = await executeTrades(baseAgent, actions, basePrices);
-    expect(result).toHaveLength(1);
-    expect(result[0].action).toBe("BUY");
-    expect(result[0].token).toBe("WIF");
-  });
-
-  it("skips SELL when no holding exists", async () => {
-    let callCount = 0;
-    mockFrom.mockImplementation(() => {
-      callCount++;
-      return {
-        select: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({
-              maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
-            }),
-          }),
-        }),
-      };
-    });
-
-    const actions: AITradeAction[] = [
-      {
-        action: "SELL",
-        token: "WIF",
-        amount_usd: 100,
-        confidence: 0.8,
-        urgency: "medium",
-        reason: "test sell",
-      },
-    ];
-
-    const result = await executeTrades(baseAgent, actions, basePrices);
-    expect(result).toEqual([]);
+    expect(trades).toHaveLength(1);
   });
 });

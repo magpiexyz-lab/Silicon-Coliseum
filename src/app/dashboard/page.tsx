@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { verifySession } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase-server";
 import DashboardClient from "./_components/dashboard-client";
-import type { Agent, Holding, Trade, Decision, User } from "@/lib/types";
+import type { Agent, Trade, Decision, User } from "@/lib/types";
 
 export default async function DashboardPage() {
   const cookieStore = await cookies();
@@ -31,18 +31,8 @@ export default async function DashboardPage() {
     .eq("user_id", session.userId)
     .order("created_at", { ascending: false });
 
-  // Fetch holdings for all user's agents
+  // Fetch recent trades (from arena_trades)
   const agentIds = (agents || []).map((a: Agent) => a.id);
-  let holdings: Holding[] = [];
-  if (agentIds.length > 0) {
-    const { data } = await supabase
-      .from("holdings")
-      .select("*")
-      .in("agent_id", agentIds);
-    holdings = data || [];
-  }
-
-  // Fetch recent trades
   let trades: Trade[] = [];
   if (agentIds.length > 0) {
     const { data } = await supabase
@@ -70,7 +60,6 @@ export default async function DashboardPage() {
     <DashboardClient
       user={user as User}
       agents={(agents || []) as Agent[]}
-      holdings={holdings}
       trades={trades}
       decisions={decisions}
       walletAddress={session.walletAddress}

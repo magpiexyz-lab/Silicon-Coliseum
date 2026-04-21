@@ -1,100 +1,102 @@
-import type { MarketData, LeaderboardEntry } from "./types";
 import { createServiceClient } from "./supabase-server";
+import { getArenaLeaderboard } from "./arena-manager";
+import type { LeaderboardEntry } from "./types";
 
-export async function calculateLeaderboard(
-  prices: Map<string, MarketData>
+/**
+ * Leaderboard — arena-scoped and global rankings.
+ */
+
+/**
+ * Get leaderboard for a specific arena.
+ */
+export async function calculateArenaLeaderboard(
+  arenaId: string
 ): Promise<LeaderboardEntry[]> {
+  return getArenaLeaderboard(arenaId);
+}
+
+/**
+ * Calculate global leaderboard aggregating across completed arenas.
+ * Ranks users by average P&L% across all their arena participations.
+ */
+export async function calculateGlobalLeaderboard(): Promise<LeaderboardEntry[]> {
   const supabase = createServiceClient();
 
-  // Fetch all agents joined with users for username
-  const { data: agents, error: agentsError } = await supabase
-    .from("agents")
-    .select("*, users!inner(username)");
+  // Fetch all results from completed arenas
+  const { data: results, error } = await supabase
+    .from("arena_results")
+    .select(`
+      *,
+      agents(name, risk_level),
+      users(username)
+    `)
+    .order("pnl_percent", { ascending: false });
 
-  if (agentsError || !agents) {
-    console.error("Failed to fetch agents for leaderboard:", agentsError);
+  if (error || !results) {
+    console.error("Failed to fetch global results:", error);
     return [];
   }
 
-  // Fetch all holdings
-  const { data: holdings, error: holdingsError } = await supabase
-    .from("holdings")
-    .select("*");
+  // Group by agent and compute aggregate stats
+  const agentMap = new Map<string, {
+    agentId: string;
+    agentName: string;
+    ownerUsername: string;
+    riskLevel: string;
+    totalValue: number;
+    bestPnl: number;
+    avgPnl: number;
+    totalTrades: number;
+    arenaCount: number;
+    pnlSum: number;
+  }>();
 
-  if (holdingsError) {
-    console.error("Failed to fetch holdings for leaderboard:", holdingsError);
-    return [];
-  }
+  for (const result of results) {
+    const agent = result.agents as unknown as { name: string; risk_level: string } | null;
+    const user = result.users as unknown as { username: string } | null;
+    const agentId = result.agent_id;
 
-  // Fetch trade counts per agent
-  const { data: tradeCounts, error: tradeCountsError } = await supabase
-    .from("trades")
-    .select("agent_id");
-
-  if (tradeCountsError) {
-    console.error("Failed to fetch trade counts:", tradeCountsError);
-    return [];
-  }
-
-  // Build trade count map
-  const tradeCountMap = new Map<string, number>();
-  if (tradeCounts) {
-    for (const trade of tradeCounts) {
-      const count = tradeCountMap.get(trade.agent_id) || 0;
-      tradeCountMap.set(trade.agent_id, count + 1);
+    const existing = agentMap.get(agentId);
+    if (existing) {
+      existing.arenaCount++;
+      existing.pnlSum += result.pnl_percent;
+      existing.avgPnl = existing.pnlSum / existing.arenaCount;
+      existing.bestPnl = Math.max(existing.bestPnl, result.pnl_percent);
+      existing.totalTrades += result.trade_count;
+      existing.totalValue += result.final_value;
+    } else {
+      agentMap.set(agentId, {
+        agentId,
+        agentName: agent?.name || "Unknown",
+        ownerUsername: user?.username || "Unknown",
+        riskLevel: agent?.risk_level || "balanced",
+        totalValue: result.final_value,
+        bestPnl: result.pnl_percent,
+        avgPnl: result.pnl_percent,
+        totalTrades: result.trade_count,
+        arenaCount: 1,
+        pnlSum: result.pnl_percent,
+      });
     }
   }
 
-  // Build holdings map: agent_id -> holdings[]
-  const holdingsMap = new Map<string, typeof holdings>();
-  if (holdings) {
-    for (const holding of holdings) {
-      const agentHoldings = holdingsMap.get(holding.agent_id) || [];
-      agentHoldings.push(holding);
-      holdingsMap.set(holding.agent_id, agentHoldings);
-    }
-  }
+  // Convert to LeaderboardEntry and sort by avgPnl
+  const entries: LeaderboardEntry[] = Array.from(agentMap.values())
+    .map((a) => ({
+      rank: 0,
+      agentId: a.agentId,
+      agentName: a.agentName,
+      ownerUsername: a.ownerUsername,
+      riskLevel: a.riskLevel as LeaderboardEntry["riskLevel"],
+      initialBudget: 0,
+      totalValue: a.totalValue / a.arenaCount,
+      pnlPercent: a.avgPnl,
+      tradeCount: a.totalTrades,
+    }))
+    .sort((a, b) => b.pnlPercent - a.pnlPercent);
 
-  // Calculate leaderboard entries
-  const entries: LeaderboardEntry[] = agents.map((agent) => {
-    const agentHoldings = holdingsMap.get(agent.id) || [];
-
-    // Calculate holdings value using live prices
-    const holdingsValue = agentHoldings.reduce((sum, holding) => {
-      const marketData = prices.get(holding.token);
-      const currentPrice = marketData?.price ?? 0;
-      return sum + holding.amount * currentPrice;
-    }, 0);
-
-    const totalValue = holdingsValue + agent.current_balance;
-    const pnlPercent =
-      agent.initial_budget > 0
-        ? ((totalValue - agent.initial_budget) / agent.initial_budget) * 100
-        : 0;
-
-    // Extract username from joined users table
-    const username =
-      (agent.users as unknown as { username: string })?.username ?? "Unknown";
-
-    return {
-      rank: 0, // Will be set after sorting
-      agentId: agent.id,
-      agentName: agent.name,
-      ownerUsername: username,
-      riskLevel: agent.risk_level,
-      initialBudget: agent.initial_budget,
-      totalValue,
-      pnlPercent,
-      tradeCount: tradeCountMap.get(agent.id) || 0,
-    };
-  });
-
-  // Sort by P&L% descending
-  entries.sort((a, b) => b.pnlPercent - a.pnlPercent);
-
-  // Assign ranks
-  entries.forEach((entry, index) => {
-    entry.rank = index + 1;
+  entries.forEach((entry, i) => {
+    entry.rank = i + 1;
   });
 
   return entries;

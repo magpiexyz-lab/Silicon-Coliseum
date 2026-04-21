@@ -215,9 +215,9 @@ export default function AgentDetailModal({
                       </button>
                     </div>
                     <p className="text-sm">{d.reasoning}</p>
-                    {expandedDecision === d.id && d.raw_json && (
+                    {expandedDecision === d.id && d.raw_json != null && (
                       <pre className="mt-2 p-2 rounded bg-background text-xs overflow-auto max-h-40 font-mono">
-                        {JSON.stringify(d.raw_json, null, 2)}
+                        {JSON.stringify(d.raw_json as Record<string, unknown>, null, 2)}
                       </pre>
                     )}
                   </div>

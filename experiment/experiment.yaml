@@ -167,9 +167,9 @@ stack:
     icons: lucide-react
   animation: framer-motion@12
   ai:
-    provider: groq
-    model: llama-3.3-70b-versatile
-    sdk: openai
+    provider: cerebras
+    model: llama-3.3-70b
+    sdk: openai # Cerebras uses OpenAI-compatible SDK
   blockchain:
     library: ethers@6
     chain: arbitrum-one
@@ -378,7 +378,7 @@ structure:
         evaluate:
           route.ts: "POST — manually trigger AI evaluation of all active agents"
         cron:
-          route.ts: "POST — Vercel cron endpoint for periodic agent evaluation (every 5 min)"
+          route.ts: "POST — Vercel cron endpoint for periodic agent evaluation (every 1 hour)"
         share:
           route.ts: "POST — generate share token for an agent"
         health:
@@ -405,7 +405,7 @@ structure:
       contract.ts: "SCT contract address, ABI, Arbitrum RPC config, tier definitions"
       tokens.ts: "Predefined list of 12 meme tokens with metadata (symbol, name, chain, search query)"
       market.ts: "DexScreener API wrapper — fetch prices, 5m/1h/6h/24h changes, volume, liquidity"
-      sentiment.ts: "Groq Llama 3.3 70B sentiment analysis — returns scores, buzz level, themes per token"
+      sentiment.ts: "Cerebras Llama 3.3 70B sentiment analysis — returns scores, buzz level, themes per token"
       agent-engine.ts: "AI trade decision engine — builds prompt with portfolio + market data + sentiment, parses structured JSON response"
       trade-executor.ts: "Paper trade execution logic — BUY (deduct cash, create/update holding with VWAP), SELL (partial/full liquidation)"
       leaderboard.ts: "P&L calculation using live prices — (holdings_value + cash - initial_budget) / initial_budget"
@@ -476,13 +476,13 @@ business_logic:
       degen: "Maximum risk, massive positions (up to 50%), trades on any signal, YOLO mentality"
 
   trading_loop:
-    schedule: "Every 5 minutes (configurable via CRON_INTERVAL_MINUTES)"
+    schedule: "Every 1 hour (configurable via CRON_INTERVAL_MINUTES)"
     implementation: "Vercel Cron or Supabase pg_cron calling POST /api/cron"
     flow:
       1: "Fetch all active agents from database"
       2: "For each agent, gather: current holdings, cash balance, recent trades, selected tokens"
       3: "Fetch live market data from DexScreener for agent's token set"
-      4: "Run sentiment analysis via Groq Llama 3.3 70B for each token"
+      4: "Run sentiment analysis via Cerebras Llama 3.3 70B for each token"
       5: "Build comprehensive prompt with portfolio state + market data + sentiment + risk profile + personality"
       6: "AI returns structured JSON decision: { should_trade, reasoning, market_analysis, actions[] }"
       7: "Each action: { action: BUY|SELL, token, amount_usd, confidence, urgency, reason }"
@@ -501,8 +501,8 @@ business_logic:
       - fdv
 
   sentiment_analysis:
-    provider: Groq
-    model: llama-3.3-70b-versatile
+    provider: Cerebras
+    model: llama-3.3-70b
     input: "Token name + price data + volume + market context"
     output:
       - sentiment_score: "float -1.0 to +1.0 (bearish to bullish)"
@@ -547,7 +547,7 @@ env:
     NEXT_PUBLIC_SUPABASE_URL: "Supabase project URL"
     NEXT_PUBLIC_SUPABASE_ANON_KEY: "Supabase anon/public key"
     SUPABASE_SERVICE_ROLE_KEY: "Supabase service role key (server-side only)"
-    GROQ_API_KEY: "Groq API key for Llama 3.3 70B"
+    CEREBRAS_API_KEY: "Cerebras API key for Llama 3.3 70B"
   optional:
     CRON_SECRET: "Secret token to authenticate cron endpoint calls"
     CRON_INTERVAL_MINUTES: "Trading loop interval (default: 5)"

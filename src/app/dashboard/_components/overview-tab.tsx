@@ -1,26 +1,24 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import {
-  DollarSign,
+  Swords,
   TrendingUp,
   Bot,
   Activity,
   Plus,
-  Coins,
   Zap,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import AnimatedCounter from "@/components/animated-counter";
-import PnlDisplay from "@/components/pnl-display";
 import RiskLevelBadge from "@/components/risk-level-badge";
-import type { Agent, Holding, Trade } from "@/lib/types";
+import type { Agent, Trade } from "@/lib/types";
 
 interface OverviewTabProps {
   agents: Agent[];
-  holdings: Holding[];
   trades: Trade[];
   userId: string;
   onRefresh: () => void;
@@ -37,22 +35,24 @@ const fadeUp = {
 
 export default function OverviewTab({
   agents,
-  holdings,
   trades,
   userId,
   onRefresh,
 }: OverviewTabProps) {
+  const [activeArenas, setActiveArenas] = useState(0);
+
+  useEffect(() => {
+    fetch(`/api/arenas/my-entries?user_id=${userId}`)
+      .then((r) => r.json())
+      .then((d) => setActiveArenas(Array.isArray(d) ? d.length : 0))
+      .catch(() => {});
+  }, [userId]);
+
   const stats = useMemo(() => {
-    const totalBudget = agents.reduce((s, a) => s + a.initial_budget, 0);
-    const totalBalance = agents.reduce((s, a) => s + a.current_balance, 0);
-    // Note: holdings value requires live prices which we don't have here
-    // Approximate with balance only for now
-    const totalValue = totalBalance;
-    const pnl = totalBudget > 0 ? ((totalValue - totalBudget) / totalBudget) * 100 : 0;
     const activeAgents = agents.filter((a) => a.is_active).length;
     const totalTrades = trades.length;
 
-    return { totalValue, totalBudget, pnl, activeAgents, totalTrades };
+    return { activeAgents, totalTrades };
   }, [agents, trades]);
 
   const recentTrades = trades.slice(0, 10);
@@ -63,17 +63,10 @@ export default function OverviewTab({
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           {
-            icon: DollarSign,
-            label: "Portfolio Value",
-            value: stats.totalValue,
-            format: "currency" as const,
-          },
-          {
-            icon: TrendingUp,
-            label: "Total P&L",
-            value: stats.pnl,
-            format: "percent" as const,
-            isPnl: true,
+            icon: Swords,
+            label: "Active Arenas",
+            value: activeArenas,
+            format: "number" as const,
           },
           {
             icon: Bot,
@@ -87,6 +80,12 @@ export default function OverviewTab({
             value: stats.totalTrades,
             format: "number" as const,
           },
+          {
+            icon: TrendingUp,
+            label: "Agents Deployed",
+            value: agents.length,
+            format: "number" as const,
+          },
         ].map((stat, i) => (
           <motion.div key={i} variants={fadeUp}>
             <Card className="glass border-border/30">
@@ -98,14 +97,10 @@ export default function OverviewTab({
                   </span>
                 </div>
                 <div className="text-2xl font-bold">
-                  {stat.isPnl ? (
-                    <PnlDisplay value={stat.value} percentage showArrow />
-                  ) : (
-                    <AnimatedCounter
-                      value={stat.value}
-                      format={stat.format}
-                    />
-                  )}
+                  <AnimatedCounter
+                    value={stat.value}
+                    format={stat.format}
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -172,9 +167,11 @@ export default function OverviewTab({
                 <Plus className="w-4 h-4" />
                 Create Agent
               </Button>
-              <Button variant="outline" size="sm" className="w-full justify-start gap-2">
-                <Coins className="w-4 h-4" />
-                Buy SCT
+              <Button asChild variant="outline" size="sm" className="w-full justify-start gap-2">
+                <Link href="/arenas">
+                  <Swords className="w-4 h-4" />
+                  Browse Arenas
+                </Link>
               </Button>
               <Button
                 variant="outline"
