@@ -2,7 +2,7 @@ import { NextResponse, NextRequest } from "next/server";
 import { z } from "zod";
 import { createServiceClient } from "@/lib/supabase-server";
 import { getArenas } from "@/lib/arena-manager";
-import { requireAdmin } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
 import { rateLimit } from "@/lib/rate-limit";
 
 const CreateArenaSchema = z.object({
@@ -84,26 +84,37 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const body = await request.json();
     const supabase = createServiceClient();
 
     // Require admin
-    let admin;
-    try {
-      admin = await requireAdmin(request, supabase);
-    } catch (res) {
-      if (res instanceof Response) {
-        return NextResponse.json(
-          JSON.parse(await res.text()),
-          { status: res.status }
-        );
-      }
+    const session = await getSession(request);
+    if (!session) {
       return NextResponse.json(
         { error: "Authentication required" },
         { status: 401 }
       );
     }
 
-    const body = await request.json();
+    const { data: adminUser, error: adminError } = await supabase
+      .from("users")
+      .select("*")
+      .eq("id", session.userId)
+      .single();
+
+    if (adminError || !adminUser) {
+      return NextResponse.json(
+        { error: "User not found" },
+        { status: 404 }
+      );
+    }
+
+    if (!adminUser.is_admin) {
+      return NextResponse.json(
+        { error: "Admin access required" },
+        { status: 403 }
+      );
+    }
     const parsed = CreateArenaSchema.safeParse(body);
 
     if (!parsed.success) {
@@ -136,7 +147,7 @@ export async function POST(request: NextRequest) {
         decay_rate: decayRate,
         competition_start: competitionStart || null,
         competition_end: competitionEnd || null,
-        created_by: admin.id,
+        created_by: adminUser.id,
       })
       .select()
       .single();
