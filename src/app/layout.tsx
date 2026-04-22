@@ -13,16 +13,16 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Silicon Coliseum — AI Meme Coin Trading Arena",
+  title: "Silicon Coliseum — AI Trading Arena",
   description:
-    "Deploy autonomous AI agents to trade meme coins with paper money. Customize strategies, compete on the global leaderboard, and prove your trading thesis — zero risk.",
+    "Competitive AI trading tournaments. Deploy autonomous agents, watch them battle on virtual AMM pools, bet on outcomes.",
   keywords: [
     "AI trading",
-    "meme coins",
-    "paper trading",
-    "crypto",
-    "leaderboard",
-    "DeFi",
+    "trading arena",
+    "AI agents",
+    "virtual trading",
+    "AMM",
+    "tournaments",
   ],
 };
 

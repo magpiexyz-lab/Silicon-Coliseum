@@ -1,7 +1,34 @@
 import OpenAI from "openai";
 import { createServiceClient } from "./supabase-server";
 import { calculatePrice } from "./amm";
-import type { Pool, PoolAnalysis, PoolSnapshot } from "./types";
+import type { PoolAnalysis } from "./types";
+
+/** Raw pool snapshot row from Supabase (snake_case columns) */
+interface RawPoolSnapshot {
+  id: string;
+  pool_id: string;
+  price: number;
+  reserve_token: number;
+  reserve_base: number;
+  volume: number;
+  created_at: string;
+}
+
+/** Raw pool row from Supabase with optional joined symbol/name fields */
+interface RawPool {
+  id: string;
+  arena_id: string;
+  token_a: string;
+  token_b: string;
+  reserve_a: number;
+  reserve_b: number;
+  fee_rate: number;
+  total_volume: number;
+  token_a_symbol?: string;
+  token_b_symbol?: string;
+  token_a_name?: string;
+  token_b_name?: string;
+}
 
 const cerebras = new OpenAI({
   baseURL: "https://api.cerebras.ai/v1",
@@ -16,7 +43,7 @@ const cerebras = new OpenAI({
 /**
  * Analyze a single pool and generate market narrative.
  */
-export async function analyzePool(pool: Pool): Promise<PoolAnalysis> {
+export async function analyzePool(pool: RawPool): Promise<PoolAnalysis> {
   const supabase = createServiceClient();
 
   // Fetch recent snapshots for momentum/volatility
@@ -27,7 +54,7 @@ export async function analyzePool(pool: Pool): Promise<PoolAnalysis> {
     .order("created_at", { ascending: false })
     .limit(48); // ~48 hours of hourly snapshots
 
-  const snapshotList = (snapshots || []) as PoolSnapshot[];
+  const snapshotList = (snapshots || []) as RawPoolSnapshot[];
 
   const currentPrice = calculatePrice(pool.reserve_a, pool.reserve_b);
 
@@ -92,20 +119,20 @@ export async function analyzeArenaPools(arenaId: string): Promise<PoolAnalysis[]
 
   const analyses: PoolAnalysis[] = [];
   for (const p of pools) {
-    const pool: Pool = {
+    const pool: RawPool = {
       ...p,
       token_a_symbol: (p.token_a_ref as { symbol: string } | null)?.symbol,
       token_b_symbol: (p.token_b_ref as { symbol: string } | null)?.symbol,
       token_a_name: (p.token_a_ref as { name: string } | null)?.name,
       token_b_name: (p.token_b_ref as { name: string } | null)?.name,
-    } as Pool;
+    } as RawPool;
     analyses.push(await analyzePool(pool));
   }
 
   return analyses;
 }
 
-function calculatePriceChange(snapshots: PoolSnapshot[], hoursAgo: number): number {
+function calculatePriceChange(snapshots: RawPoolSnapshot[], hoursAgo: number): number {
   if (snapshots.length < 2) return 0;
 
   const current = snapshots[0];
@@ -118,7 +145,7 @@ function calculatePriceChange(snapshots: PoolSnapshot[], hoursAgo: number): numb
   return ((current.price - past.price) / past.price) * 100;
 }
 
-function calculateMomentum(snapshots: PoolSnapshot[]): number {
+function calculateMomentum(snapshots: RawPoolSnapshot[]): number {
   if (snapshots.length < 3) return 0;
 
   // Simple momentum: weighted average of recent price changes
@@ -137,7 +164,7 @@ function calculateMomentum(snapshots: PoolSnapshot[]): number {
   return Math.max(-1, Math.min(1, raw * 10)); // Scale up for sensitivity
 }
 
-function calculateVolatility(snapshots: PoolSnapshot[]): number {
+function calculateVolatility(snapshots: RawPoolSnapshot[]): number {
   if (snapshots.length < 3) return 0;
 
   const returns: number[] = [];
@@ -158,7 +185,7 @@ function calculateVolatility(snapshots: PoolSnapshot[]): number {
   return Math.sqrt(variance);
 }
 
-function calculateRecentVolume(snapshots: PoolSnapshot[], hoursAgo: number): number {
+function calculateRecentVolume(snapshots: RawPoolSnapshot[], hoursAgo: number): number {
   if (snapshots.length < 2) return 0;
 
   const cutoff = new Date(Date.now() - hoursAgo * 60 * 60 * 1000);
@@ -174,7 +201,7 @@ function calculateRecentVolume(snapshots: PoolSnapshot[], hoursAgo: number): num
 }
 
 async function generateNarrative(
-  pool: Pool,
+  pool: RawPool,
   price: number,
   change1h: number,
   change24h: number,

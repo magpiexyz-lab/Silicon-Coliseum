@@ -53,7 +53,7 @@ export async function getPoolsByArena(arenaId: string): Promise<Pool[]> {
     token_b_symbol: (p.token_b_ref as { symbol: string } | null)?.symbol,
     token_a_name: (p.token_a_ref as { name: string } | null)?.name,
     token_b_name: (p.token_b_ref as { name: string } | null)?.name,
-  })) as Pool[];
+  })) as unknown as Pool[];
 }
 
 export async function getPoolById(poolId: string): Promise<Pool> {
@@ -78,7 +78,7 @@ export async function getPoolById(poolId: string): Promise<Pool> {
     token_b_symbol: (p.token_b_ref as { symbol: string } | null)?.symbol,
     token_a_name: (p.token_a_ref as { name: string } | null)?.name,
     token_b_name: (p.token_b_ref as { name: string } | null)?.name,
-  } as Pool;
+  } as unknown as Pool;
 }
 
 /**

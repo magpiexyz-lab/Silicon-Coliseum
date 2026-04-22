@@ -88,10 +88,10 @@ export async function calculateGlobalLeaderboard(): Promise<LeaderboardEntry[]> 
       agentName: a.agentName,
       ownerUsername: a.ownerUsername,
       riskLevel: a.riskLevel as LeaderboardEntry["riskLevel"],
-      initialBudget: 0,
       totalValue: a.totalValue / a.arenaCount,
       pnlPercent: a.avgPnl,
       tradeCount: a.totalTrades,
+      cashBalance: 0,
     }))
     .sort((a, b) => b.pnlPercent - a.pnlPercent);
 

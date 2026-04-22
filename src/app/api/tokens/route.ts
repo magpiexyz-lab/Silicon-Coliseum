@@ -1,8 +1,35 @@
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
+import { z } from "zod";
 import { createServiceClient } from "@/lib/supabase-server";
+import { requireAdmin } from "@/lib/auth";
+import { rateLimit } from "@/lib/rate-limit";
 
-export async function GET() {
+const CreateTokenSchema = z.object({
+  symbol: z
+    .string()
+    .min(1, "Symbol is required")
+    .max(10)
+    .transform((v) => v.toUpperCase()),
+  name: z.string().min(1, "Token name is required").max(100),
+  imageUrl: z.string().url().optional(),
+  description: z.string().max(500).optional(),
+});
+
+export async function GET(request: NextRequest) {
   try {
+    const ip =
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
+
+    const limit = rateLimit(ip, "read");
+    if (!limit.success) {
+      return NextResponse.json(
+        { error: "Too many requests" },
+        { status: 429 }
+      );
+    }
+
     const supabase = createServiceClient();
 
     const { data: tokens, error } = await supabase
@@ -11,7 +38,7 @@ export async function GET() {
       .order("created_at", { ascending: true });
 
     if (error) {
-      console.error("Failed to fetch platform tokens:", error);
+      console.error("Failed to fetch tokens:", error);
       return NextResponse.json(
         { error: "Failed to fetch tokens" },
         { status: 500 }
@@ -19,6 +46,93 @@ export async function GET() {
     }
 
     return NextResponse.json({ tokens: tokens || [] });
+  } catch {
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const ip =
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
+
+    const limit = rateLimit(ip, "write");
+    if (!limit.success) {
+      return NextResponse.json(
+        { error: "Too many requests" },
+        { status: 429 }
+      );
+    }
+
+    const supabase = createServiceClient();
+
+    try {
+      await requireAdmin(request, supabase);
+    } catch (res) {
+      if (res instanceof Response) {
+        return NextResponse.json(
+          JSON.parse(await res.text()),
+          { status: res.status }
+        );
+      }
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
+    const body = await request.json();
+    const parsed = CreateTokenSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0].message },
+        { status: 400 }
+      );
+    }
+
+    const { symbol, name, imageUrl, description } = parsed.data;
+
+    // Check for duplicate symbol
+    const { data: existing } = await supabase
+      .from("platform_tokens")
+      .select("id")
+      .eq("symbol", symbol)
+      .maybeSingle();
+
+    if (existing) {
+      return NextResponse.json(
+        { error: "Token symbol already exists" },
+        { status: 409 }
+      );
+    }
+
+    const { data: token, error: insertError } = await supabase
+      .from("platform_tokens")
+      .insert({
+        symbol,
+        name,
+        image_url: imageUrl || null,
+        description: description || null,
+        is_base_currency: false,
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error("Failed to create token:", insertError);
+      return NextResponse.json(
+        { error: "Failed to create token" },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ token }, { status: 201 });
   } catch {
     return NextResponse.json(
       { error: "Internal server error" },

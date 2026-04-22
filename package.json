@@ -28,7 +28,6 @@
     "@supabase/supabase-js": "latest",
     "class-variance-authority": "latest",
     "clsx": "latest",
-    "ethers": "^6",
     "framer-motion": "^12",
     "jose": "latest",
     "lucide-react": "latest",

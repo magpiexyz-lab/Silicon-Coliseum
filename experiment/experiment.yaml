@@ -1,9 +1,9 @@
 # ============================================================================
-# experiment.yaml — Silicon Coliseum (Rebuilt with Launchpad-mvp UI Template)
+# experiment.yaml — Silicon Coliseum (Arena-First Redesign)
 # ============================================================================
-# AI-powered meme coin paper trading platform with premium investor-grade UI.
-# Combines the Launchpad-mvp design system / template with Silicon Coliseum
-# core business logic.
+# AI Trading Arena — time-bound tournaments where autonomous AI agents compete
+# by trading virtual tokens on AMM pools. Spectator-first, zero-friction
+# onboarding, built-in virality via shareable result cards.
 # ============================================================================
 
 name: silicon-coliseum
@@ -14,23 +14,36 @@ status: draft
 quality: mvp
 
 description: >
-  AI-powered meme coin paper trading arena where users deploy autonomous AI agents
-  that trade crypto meme tokens using simulated (paper) money. Users connect their
-  MetaMask wallet, hold SCT tokens on Arbitrum for agent slots, customize agent
-  strategies, and compete on a global P&L leaderboard — all wrapped in a premium
-  dark-first glassmorphism UI.
+  AI Trading Arena where autonomous AI agents compete in time-bound tournaments.
+  Each arena features virtual tokens traded on AMM pools — agents' trades move
+  prices, creating a real strategy game. Anyone can spectate live arenas without
+  an account. Sign up with email to deploy your own agent and compete. Spectators
+  bet Coliseum Points on outcomes. When arenas end, shareable result cards drive
+  organic discovery.
 
-thesis: "If crypto enthusiasts can deploy autonomous AI trading agents with zero financial risk via paper trading, then 20+ users will create at least one agent within 2 weeks, as measured by agent creation events"
-target_user: Crypto enthusiasts and meme coin traders who want to experiment with AI-driven trading strategies without risking real money
+thesis: >
+  If users can deploy AI trading agents into competitive arenas with zero friction
+  (email signup, no wallet needed), then 50+ users will enter at least one arena
+  within 2 weeks, as measured by arena entry events.
+
+target_user: >
+  Crypto-curious users, strategy game fans, and AI enthusiasts who want to
+  compete using AI agents without risking real money. Secondary: crypto traders
+  who want to test strategies in a competitive, time-bound format.
+
 distribution: |
   Post in crypto Twitter, r/cryptocurrency, r/algotrading.
-  Share in Telegram/Discord meme coin communities.
+  Share in Telegram/Discord meme coin and AI communities.
   Showcase on Product Hunt and Indie Hackers.
+  Leverage shareable arena result cards for organic Twitter/X virality.
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Hypotheses
+# ─────────────────────────────────────────────────────────────────────────────
 hypotheses:
   - id: h-01
     category: demand
-    statement: ">5% of visitors who see the landing page click 'Launch Your Agent'"
+    statement: ">5% of landing page visitors click 'Enter the Arena' CTA"
     metric:
       formula: "cta_click / visit_landing"
       threshold: 0.05
@@ -41,95 +54,149 @@ hypotheses:
     status: pending
   - id: h-02
     category: activate
-    statement: ">30% of users who connect their wallet create at least one AI agent"
+    statement: ">30% of signed-up users deploy an agent into an arena"
     metric:
-      formula: "agent_created / signup_complete"
+      formula: "arena_entry / signup_complete"
       threshold: 0.30
       operator: gte
     priority_score: 80
     experiment_level: 2
     depends_on: [h-01]
     status: pending
+  - id: h-03
+    category: activate
+    statement: ">20% of arena participants share their result card"
+    metric:
+      formula: "share_result / arena_completed"
+      threshold: 0.20
+      operator: gte
+    priority_score: 70
+    experiment_level: 2
+    depends_on: [h-02]
+    status: pending
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Behaviors (BDD specs)
+# ─────────────────────────────────────────────────────────────────────────────
 behaviors:
   - id: b-01
     hypothesis_id: h-01
-    given: "A crypto enthusiast visits the Silicon Coliseum landing page"
-    when: "They read the value proposition"
-    then: "They click 'Launch Your Agent' CTA (>5% of visitors)"
+    given: "A visitor lands on the Silicon Coliseum home page"
+    when: "They see the live arena spectator view and value proposition"
+    then: "They click 'Enter the Arena' CTA (>5% of visitors)"
     tests:
       - "Landing page renders without errors"
+      - "Live arena preview displays current arena state"
       - "CTA button is visible and clickable"
     level: 1
   - id: b-02
     hypothesis_id: h-01
     given: "A visitor clicks the CTA"
-    when: "They connect their MetaMask wallet"
-    then: "Account is created and they land on the dashboard"
+    when: "They sign up with email or social login"
+    then: "Account is created and they land on the arena browser"
     tests:
-      - "Wallet connect flow completes"
-      - "User is redirected to dashboard after signup"
+      - "Email/social signup flow completes"
+      - "User is redirected to arena browser after signup"
     level: 2
   - id: b-03
     hypothesis_id: h-02
-    given: "A signed-up user is on the dashboard"
-    when: "They click 'Create Agent' and configure strategy"
-    then: "An AI agent is created and begins evaluating markets"
+    given: "A signed-up user is browsing arenas"
+    when: "They click 'Enter Arena' on an active/upcoming arena"
+    then: "They deploy an agent (quick or custom) and are entered into the arena"
     tests:
-      - "Agent creation form validates input"
-      - "Agent appears in agents tab after creation"
+      - "Quick deploy creates default agent and enters arena"
+      - "Custom deploy validates agent config and enters arena"
+      - "Arena enforces 20-agent cap with first-come-first-served"
     level: 2
   - id: b-04
     hypothesis_id: h-02
-    given: "An active agent exists"
-    when: "The cron job triggers evaluation"
-    then: "Agent analyzes market data and executes paper trades"
+    given: "An agent is entered in an active arena"
+    when: "The 30-minute eval cycle triggers"
+    then: "System applies price drift, cash decay, then AI agent evaluates and trades"
     tests:
-      - "Trade records appear in trade history"
-      - "Agent holdings update after trades"
+      - "Price drift modifies pool reserves within ±1-5%"
+      - "Cash decay reduces agent vUSD cash by 0.1%"
+      - "AI agent makes buy/sell/hold decisions via AMM"
+      - "Trades update pool reserves and agent balances"
+    level: 2
+  - id: b-05
+    hypothesis_id: h-02
+    given: "An arena's timer reaches zero"
+    when: "The system finalizes the arena"
+    then: "All positions are liquidated, rankings calculated, rewards distributed"
+    tests:
+      - "Arena status transitions to completed"
+      - "Final rankings computed by total portfolio value in vUSD"
+      - "CP rewards distributed to top 10 agent owners"
+      - "Bet payouts calculated and distributed to winning bettors"
+    level: 2
+  - id: b-06
+    hypothesis_id: h-03
+    given: "An arena has completed and results are available"
+    when: "A user views their arena result"
+    then: "A shareable result card is generated and can be shared to Twitter/X"
+    tests:
+      - "Result card renders with agent name, rank, P&L%"
+      - "Share to Twitter/X button works with OG image"
+    level: 2
+  - id: b-07
+    hypothesis_id: h-02
+    given: "A spectator (non-participant) is viewing an active arena"
+    when: "They place a bet on an agent to finish top 3"
+    then: "Bet is recorded in CP and locked when arena starts"
+    tests:
+      - "Spectators can bet, participants cannot"
+      - "Bets lock at arena start time"
+      - "Losing bet pool splits 50/50 between agent owners and winning bettors"
     level: 2
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Golden Path
+# ─────────────────────────────────────────────────────────────────────────────
 golden_path:
-  - step: "Visit landing page"
+  - step: "Visit landing page — see live arena spectator view"
     event: visit_landing
     page: landing
-  - step: "Click 'Launch Your Agent'"
+  - step: "Click 'Enter the Arena'"
     event: cta_click
     page: landing
-  - step: "Connect MetaMask wallet and register"
+  - step: "Sign up with email/social"
     event: signup_complete
-    page: login
-  - step: "Create an AI trading agent"
-    event: agent_created
-    page: dashboard
-  - step: "View agent performance on leaderboard"
-    event: view_leaderboard
-    page: dashboard
+    page: signup
+  - step: "Browse arenas and enter one"
+    event: arena_entry
+    page: arenas
+  - step: "Watch agent compete in live arena"
+    event: view_arena
+    page: arena_detail
+  - step: "Arena ends — view results and share"
+    event: share_result
+    page: arena_results
 target_clicks: 4
 
 variants:
   - slug: arena
-    headline: "The AI Meme Coin Trading Arena"
-    subheadline: "Deploy autonomous AI agents that trade crypto meme tokens with paper money. Zero risk, maximum alpha."
-    cta: "Launch Your Agent"
-    promise: "AI-powered trading without the risk"
-    proof: "Real-time market data from DexScreener across 12 meme tokens"
-    urgency: "The arena is live — deploy your agent now"
-    pain_points:
-      - "Manual trading is stressful and time-consuming"
-      - "Testing strategies with real money is risky"
-      - "Existing paper trading tools lack AI automation"
-  - slug: compete
-    headline: "Compete With AI-Powered Trading Bots"
-    subheadline: "Build your strategy, deploy your agent, climb the leaderboard. No real money needed."
+    headline: "The AI Trading Arena"
+    subheadline: "Deploy autonomous AI agents into competitive trading tournaments. Watch them battle on virtual AMM pools. Zero risk, pure strategy."
     cta: "Enter the Arena"
-    promise: "Prove your trading strategy against the best"
-    proof: "Global P&L leaderboard with live DexScreener prices"
-    urgency: "Top agents are already trading — join the competition"
+    promise: "Your AI agent vs the world"
+    proof: "Live arena with AI agents trading right now"
+    urgency: "Only 20 slots per arena — spots fill fast"
     pain_points:
-      - "No way to test trading ideas without real risk"
-      - "Hard to compare strategies objectively"
-      - "Algo trading tools are too complex for most traders"
+      - "Strategy games lack real-time financial dynamics"
+      - "AI trading tools are complex and require real money"
+      - "No way to competitively test trading strategies"
+  - slug: spectate
+    headline: "Watch AI Agents Battle in Real-Time"
+    subheadline: "Virtual trading tournaments where AI agents compete on AMM pools. Bet on winners. Deploy your own."
+    cta: "Watch Live Arena"
+    promise: "The most exciting AI competition you can spectate"
+    proof: "Live price charts moving as agents trade"
+    urgency: "Arena #42 ends in 3 hours — place your bets"
+    pain_points:
+      - "Most AI demos are static and boring"
+      - "No way to watch AI compete in real-time"
+      - "Fantasy sports but for AI trading"
 
 funnel:
   available_from:
@@ -153,8 +220,7 @@ stack:
       ui: shadcn
       testing: vitest
   database: supabase
-  auth: supabase
-  # Extended stack details (non-template fields preserved for reference)
+  auth: email-social # Email + Google/GitHub social login via Supabase Auth
   framework: next@15
   language: typescript
   runtime_version: node@20
@@ -170,12 +236,8 @@ stack:
     provider: cerebras
     model: llama-3.3-70b
     sdk: openai # Cerebras uses OpenAI-compatible SDK
-  blockchain:
-    library: ethers@6
-    chain: arbitrum-one
-    wallet: metamask
   validation: zod
-  scheduling: pg_cron
+  scheduling: vercel-cron # 30-minute eval cycles
 
 deploy:
   url: null
@@ -183,8 +245,7 @@ deploy:
   domain: null
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Design System — Dark-first premium trading aesthetic
-# Ported from Launchpad-mvp, re-themed for a crypto/trading arena vibe.
+# Design System — Dark-first premium trading arena aesthetic
 # ─────────────────────────────────────────────────────────────────────────────
 design:
   philosophy: >
@@ -194,22 +255,20 @@ design:
     particle systems create a high-end feel. All colors use oklch() color space.
 
   color_tokens:
-    # Dark theme (default)
-    background: "oklch(0.145 0.02 260)" # Near-black with subtle blue tint
+    background: "oklch(0.145 0.02 260)"
     foreground: "oklch(0.985 0.002 260)"
     card: "oklch(0.205 0.015 260)"
     card_foreground: "oklch(0.985 0.002 260)"
-    primary: "oklch(0.72 0.19 165)" # Emerald/Teal — gains, CTAs, highlights
+    primary: "oklch(0.72 0.19 165)" # Emerald — gains, CTAs
     primary_foreground: "oklch(0.145 0.02 260)"
-    secondary: "oklch(0.78 0.16 75)" # Warm Amber — warnings, losses, upsells
+    secondary: "oklch(0.78 0.16 75)" # Amber — warnings, losses
     secondary_foreground: "oklch(0.145 0.02 260)"
-    destructive: "oklch(0.65 0.2 25)" # Red — sell signals, errors
+    destructive: "oklch(0.65 0.2 25)" # Red — sell, errors
     muted: "oklch(0.27 0.01 260)"
     muted_foreground: "oklch(0.65 0.015 260)"
     accent: "oklch(0.25 0.015 260)"
     border: "oklch(0.35 0.015 260)"
     ring: "oklch(0.72 0.19 165)"
-    # Light theme applied via .light class on <html>
     light_overrides: true
 
   visual_effects:
@@ -217,86 +276,63 @@ design:
       class: ".glass"
       backdrop_blur: "16px"
       saturate: 1.4
-      hover_glow: true # .glass-glow — emerald shadow on hover
+      hover_glow: true
     mesh_gradient:
       class: ".mesh-gradient"
-      layers: 3 # Emerald + amber + blue radial gradients
-      usage: [login, signup, dashboard, 404]
+      layers: 3
+      usage: [landing, signup, login, dashboard, arena, 404]
     grain_texture:
       class: ".grain"
       type: "SVG fractal noise"
       opacity: 0.035
-      position: fixed
-      pointer_events: none
     gradient_text:
       class: ".gradient-text"
       gradient: "emerald-to-amber"
-      shimmer_variant: ".shimmer-text" # Scrolling highlight animation
+      shimmer_variant: ".shimmer-text"
 
   animations:
     css_keyframes:
-      - animate-float # Organic vertical floating
+      - animate-float
       - animate-float-slow
       - animate-float-reverse
-      - animate-shimmer # Scrolling gradient shimmer for text
-      - animate-marquee # Infinite scroll for trust/stats bar
-      - aurora-bg # Slow 4-point gradient shift
-      - gradient-border # Animated conic gradient border
-      - pulse-glow # Periodic emerald box-shadow pulse
-      - glow-btn # Blurred gradient halo behind buttons on hover
+      - animate-shimmer
+      - animate-marquee
+      - aurora-bg
+      - gradient-border
+      - pulse-glow
+      - glow-btn
     framer_motion:
       - AnimatePresence on all modals, dropdowns, tab content
-      - layoutId="activeTab" for spring-animated tab indicators
-      - Stagger container variants (60ms child delay) on dashboard sections
-      - useInView for scroll-triggered section reveals
-      - useScroll + useTransform for parallax on landing hero
-      - Animated bar chart bars (height from 0)
-      - Animated progress bars for P&L visualization
+      - layoutId for spring-animated tab indicators
+      - Stagger container variants (60ms child delay)
+      - useInView for scroll-triggered reveals
+      - Animated price charts and progress bars
 
   interactive_elements:
     particles:
       component: InteractiveParticles
       renderer: canvas
       default_count: 80
-      auth_page_count: 50
       features:
         - Organic float via sine/cosine motion
         - Mouse proximity repulsion
-        - Drift back to base position
         - Opacity pulsing
-        - Optional connecting lines between nearby particles
     cursor_follower:
       component: CursorFollower
-      effect: "Soft glowing radial gradient orb following mouse"
       usage: [landing]
     animated_counters:
       component: AnimatedCounter
       trigger: useInView
-      easing: cubic-ease-out
 
   theme:
     toggle_component: ThemeToggle
     storage_key: "silicon-coliseum-theme"
     default: dark
-    light_class: ".light" # Applied to <html> element
-    flash_prevention: "Blocking inline <script> in <head> reads localStorage"
 
   responsive:
     approach: mobile-first
     container: "max-w-7xl mx-auto"
-    breakpoints:
-      mobile: "grid-cols-1 or grid-cols-2"
-      tablet: "sm: 2-col layouts, horizontal scroll tabs"
-      desktop: "lg: multi-column grids (e.g. lg:grid-cols-4)"
-    nav: "Collapses brand on small screens, horizontal tab scroll"
 
-  skeleton_loading:
-    style: "Animated pulse grey placeholders matching real layout"
-    usage: "Dashboard tab switching, data fetching states"
-
-# ─────────────────────────────────────────────────────────────────────────────
-# shadcn/ui Components to Install
-# ─────────────────────────────────────────────────────────────────────────────
 shadcn_components:
   - avatar
   - badge
@@ -316,228 +352,215 @@ shadcn_components:
   - progress
   - skeleton
   - switch
-  - toast # For trade notifications and status updates
-  - sheet # For mobile nav drawer
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Project Structure
-# ─────────────────────────────────────────────────────────────────────────────
-structure:
-  src:
-    app:
-      layout.tsx: "Root layout — metadata, theme script injection, font loading (JetBrains Mono + Inter)"
-      page.tsx: "Landing/marketing page — hero, features grid, live leaderboard preview, how-it-works, pricing tiers, particles + cursor follower"
-      globals.css: "All Tailwind @theme inline tokens, keyframe animations, utility classes (.glass, .mesh-gradient, .grain, .gradient-text)"
-      not-found.tsx: "Animated 404 with gradient number and CTA"
-
-      login:
-        page.tsx: "MetaMask wallet connect page — glassmorphism card over particle background, signature-based auth"
-      signup:
-        page.tsx: "Username registration after wallet connect — signature verification, success animation"
-
-      dashboard:
-        page.tsx: "Server component — fetches user data, agents, holdings, decisions via Supabase; passes to client"
-        _components:
-          dashboard-client.tsx: "Main app shell — nav bar (wallet address, SCT balance, theme toggle), tabbed interface"
-          overview-tab.tsx: "Portfolio summary — total value counter, P&L chart, active agents grid, quick actions"
-          agents-tab.tsx: "Agent cards grid with status badges, P&L sparklines, activate/pause/delete controls"
-          agent-detail-modal.tsx: "Full agent view — stats cards, holdings donut chart, AI decision log (expandable), trade history table"
-          create-agent-form.tsx: "Agent creation dialog — name, risk level selector, budget slider, token multi-select, personality textarea; SCT gate check"
-          leaderboard-tab.tsx: "Global ranking table — rank, agent name, owner, risk badge, total value, P&L%, trade count; live price updates"
-          holdings-widget.tsx: "Current holdings breakdown with live prices, unrealized P&L per token"
-          trade-history.tsx: "Paginated trade log — action badge (BUY green / SELL red), token, amount, price, confidence bar, reasoning tooltip"
-          decision-log.tsx: "AI decision timeline — expandable cards showing should_trade, reasoning, market_analysis, raw JSON"
-          market-ticker.tsx: "Horizontal scrolling ticker of live meme token prices (animate-marquee)"
-          buy-sct-widget.tsx: "SCT purchase flow — tier selection cards, network switch prompt, USDT approval + purchase transactions"
-          sct-balance-badge.tsx: "Navbar badge showing SCT balance and agent slot count"
-
-      share:
-        "[token]":
-          page.tsx: "Public read-only agent performance page — SSR, no auth required, served via share token"
-          share-page-client.tsx: "Client rendering — agent stats, P&L chart, holdings, recent trades"
-
-      api:
-        auth:
-          check/route.ts: "POST — check if wallet address is registered"
-          signup/route.ts: "POST — register user with MetaMask signature verification (ethers.verifyMessage)"
-        agents:
-          route.ts: "GET (list, optional ?user_id filter) + POST (create with SCT gate)"
-          "[id]":
-            route.ts: "GET (detail with holdings, trades, decisions) + DELETE (owner only)"
-            toggle/route.ts: "PATCH — activate/pause agent (owner only)"
-        trades:
-          route.ts: "GET — last 100 trades globally"
-          "[agentId]/route.ts": "GET — paginated trade history for one agent"
-        leaderboard:
-          route.ts: "GET — all agents ranked by P&L% using live DexScreener prices"
-        tokens:
-          route.ts: "GET — fixed list of 12 tradeable meme tokens"
-          prices/route.ts: "GET — live DexScreener prices for all tokens"
-        sct:
-          "balance/[walletAddress]/route.ts": "GET — on-chain SCT balance from Arbitrum One"
-        evaluate:
-          route.ts: "POST — manually trigger AI evaluation of all active agents"
-        cron:
-          route.ts: "POST — Vercel cron endpoint for periodic agent evaluation (every 1 hour)"
-        share:
-          route.ts: "POST — generate share token for an agent"
-        health:
-          route.ts: "GET — health check"
-
-    components:
-      ui/: "shadcn/ui components (see shadcn_components list above)"
-      interactive-particles.tsx: "Canvas-based particle system with mouse interaction"
-      cursor-follower.tsx: "Radial gradient orb following mouse cursor"
-      animated-counter.tsx: "Count-up animation triggered by scroll visibility"
-      theme-toggle.tsx: "Dark/light toggle with Framer Motion icon transitions"
-      wallet-connect-button.tsx: "MetaMask connect button with address truncation and copy"
-      risk-level-badge.tsx: "Color-coded risk level badge (conservative=blue, balanced=green, aggressive=amber, degen=red)"
-      pnl-display.tsx: "P&L value with green/red coloring and up/down arrow"
-      token-icon.tsx: "Meme token icon component with fallback"
-      confidence-bar.tsx: "AI confidence visualization (0-100% filled bar)"
-
-    lib:
-      types.ts: "All TypeScript interfaces — User, Agent, Holding, Trade, Decision, Token, MarketData, AIResponse, ShareToken"
-      supabase.ts: "Browser / server / service-role Supabase client factories"
-      supabase-browser.ts: "Browser client singleton"
-      utils.ts: "cn() utility (clsx + tailwind-merge)"
-      rate-limit.ts: "In-memory IP-based rate limiter (30 reads/min, 10 writes/min)"
-      contract.ts: "SCT contract address, ABI, Arbitrum RPC config, tier definitions"
-      tokens.ts: "Predefined list of 12 meme tokens with metadata (symbol, name, chain, search query)"
-      market.ts: "DexScreener API wrapper — fetch prices, 5m/1h/6h/24h changes, volume, liquidity"
-      sentiment.ts: "Cerebras Llama 3.3 70B sentiment analysis — returns scores, buzz level, themes per token"
-      agent-engine.ts: "AI trade decision engine — builds prompt with portfolio + market data + sentiment, parses structured JSON response"
-      trade-executor.ts: "Paper trade execution logic — BUY (deduct cash, create/update holding with VWAP), SELL (partial/full liquidation)"
-      leaderboard.ts: "P&L calculation using live prices — (holdings_value + cash - initial_budget) / initial_budget"
-      share.ts: "Share token generation and validation"
-
-    middleware.ts: "Auth session refresh + redirect guards (logged-in users away from /login)"
-
-  supabase:
-    migrations:
-      "001_initial.sql": >
-        Create tables: users (id, username, wallet_address, signature, message, created_at),
-        agents (id, user_id, name, risk_level, initial_budget, current_balance, tokens JSON, is_active, personality, created_at),
-        holdings (id, agent_id, token, amount, avg_buy_price — unique agent_id+token),
-        trades (id, agent_id, action, token, amount_usd, price, token_amount, confidence, reasoning, created_at),
-        decisions (id, agent_id, should_trade, reasoning, market_analysis, raw_json, created_at),
-        share_tokens (id, agent_id, token, created_at).
-        Enable RLS on all tables. Policies: users can read/write own data; agents visible to owner + public for leaderboard;
-        trades/decisions readable by agent owner; share_tokens grant read access to associated agent data.
+  - toast
+  - sheet
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Core Business Logic
 # ─────────────────────────────────────────────────────────────────────────────
 business_logic:
 
+  # ── Authentication ──────────────────────────────────────────────────────
   authentication:
-    method: metamask-signature
+    method: email-social
+    providers: [email, google, github]
+    implementation: Supabase Auth
     flow:
-      1: "User clicks 'Connect Wallet' — requests MetaMask eth_requestAccounts"
-      2: "Frontend calls POST /api/auth/check with wallet_address (lowercased)"
-      3: "If not registered → prompt username + MetaMask personal_sign of message"
-      4: "POST /api/auth/signup verifies signature via ethers.verifyMessage, creates user"
-      5: "Session managed via Supabase auth (wallet as identifier)"
-    notes: "No passwords, no email. Wallet address is the identity."
+      1: "User clicks 'Enter the Arena' → redirected to signup/login"
+      2: "Sign up with email (magic link or password) or social OAuth (Google, GitHub)"
+      3: "Pick a username (2-30 chars, alphanumeric + underscores)"
+      4: "Session managed via Supabase Auth (JWT in cookie)"
+      5: "Optional: connect crypto wallet later for future features"
+    notes: >
+      No MetaMask or wallet required for MVP. Supabase Auth handles
+      email/password, magic links, and social OAuth. Wallet connect
+      is deferred to post-MVP.
 
-  token_gating:
-    token: SCT (SiliconColesiumToken)
-    chain: Arbitrum One (42161)
-    contract: ERC-20 + Ownable (OpenZeppelin)
-    rule: "1 whole SCT token = 1 agent creation slot"
-    enforcement:
-      - "Backend reads wholeTokenBalance(address) on-chain via ethers before allowing agent creation"
-      - "Frontend displays SCT balance and available slots in navbar badge"
-    purchase_tiers:
-      - { tier: 1, usdt_cost: 1, sct_received: 1, rate: "$1.00/SCT", label: "Starter" }
-      - { tier: 10, usdt_cost: 10, sct_received: 20, rate: "$0.50/SCT", label: "Pro (Popular)" }
-      - { tier: 100, usdt_cost: 100, sct_received: 250, rate: "$0.40/SCT", label: "Whale (Best Value)" }
-    purchase_flow:
-      1: "User selects tier on Buy SCT page"
-      2: "Frontend checks network — prompts switch to Arbitrum One if needed"
-      3: "USDT approve transaction (ERC-20 approval to SCT contract)"
-      4: "SCT purchaseTokens(tier) transaction"
-      5: "Balance updates reflected in navbar"
+  # ── Arenas ──────────────────────────────────────────────────────────────
+  arenas:
+    creation: admin-only
+    configuration:
+      name: "Arena name (e.g., 'Daily Sprint #42', 'Weekend Brawl')"
+      description: "Optional description/theme"
+      duration: "Admin sets start and end times (24h, 3 days, 1 week typical)"
+      starting_balance: "vUSD amount all agents start with (e.g., 10,000)"
+      max_agents: 20 # Hard cap per arena, first-come-first-served
+      decay_rate: "Cash decay rate per eval cycle (default 0.001 = 0.1%)"
+      tokens: "Admin selects which virtual tokens are in this arena"
+      pools: "Admin sets initial reserves for each TOKEN/vUSD pool"
+    lifecycle:
+      - phase: upcoming
+        description: "Arena created, users can register agents, spectators can bet"
+      - phase: active
+        description: "Competition running, agents trade every 30 min, prices move"
+      - phase: completed
+        description: "Timer ended, positions liquidated, rankings finalized, rewards paid"
+      - phase: cancelled
+        description: "Arena cancelled by admin (e.g., not enough participants)"
+    rules:
+      - "All agents start with identical vUSD balance"
+      - "Max 1 agent per user per arena (MVP)"
+      - "Agent strategy is locked once arena starts — no modifications mid-arena"
+      - "Spots are first-come-first-served up to max_agents (20)"
 
+  # ── Virtual Tokens & AMM ───────────────────────────────────────────────
+  tokens:
+    base_currency:
+      symbol: vUSD
+      name: "Virtual USD"
+      description: "Platform stablecoin, base unit for all pricing. Not a real token."
+    virtual_tokens:
+      creation: admin-only
+      examples: ["MOONCAT", "REKTCOIN", "PUMPDOGE", "ALPHASHARK", "DIAMONDPAW"]
+      fields:
+        - symbol (unique, uppercase, 2-10 chars)
+        - name (display name)
+        - image_url (optional icon)
+        - description (optional flavor text)
+    amm:
+      formula: "Constant product (x * y = k)"
+      pools: "Each token is paired with vUSD in a pool per arena"
+      pricing: "price = reserve_vUSD / reserve_TOKEN"
+      fee_rate: "0.3% per swap (configurable per pool)"
+      initial_reserves: "Admin sets when creating arena (determines starting price)"
+      example: >
+        MOONCAT/vUSD pool with 100,000 MOONCAT + 10,000 vUSD
+        → starting price = 10,000 / 100,000 = $0.10 per MOONCAT
+        When an agent buys MOONCAT, reserve_MOONCAT decreases, reserve_vUSD increases → price goes up
+
+  # ── Market Dynamics (Anti-Stalemate) ───────────────────────────────────
+  market_dynamics:
+    price_drift:
+      description: "Every eval cycle, system randomly nudges pool reserves"
+      range: "±1-5% per token per cycle"
+      purpose: "Simulates external market forces, ensures prices always move"
+      implementation: >
+        For each pool: generate random drift factor between 0.95 and 1.05.
+        Multiply one reserve by drift, recalculate k = new_reserve_a * reserve_b.
+        This shifts price without changing total liquidity drastically.
+    cash_decay:
+      description: "vUSD held as cash loses value each cycle"
+      rate: "0.1% per 30-minute cycle (configurable per arena)"
+      purpose: "Punishes inaction — agents must invest or bleed cash"
+      implementation: "agent.cash_balance *= (1 - decay_rate) each cycle"
+    combined_effect: >
+      Prices are always moving due to drift → agents see opportunities.
+      Cash decays → agents are forced to invest. Agent trades further move
+      prices via AMM → creates a dynamic, self-sustaining market.
+
+  # ── AI Agent System ────────────────────────────────────────────────────
   ai_agents:
     creation:
-      fields:
-        - { name: name, type: text, validation: "2-30 chars, required" }
-        - { name: risk_level, type: select, options: [conservative, balanced, aggressive, degen], required: true }
-        - { name: initial_budget, type: number, range: "$10 - $100,000", required: true }
-        - { name: tokens, type: multi-select, source: "predefined 12 meme tokens", max: 12, min: 1 }
-        - { name: personality, type: textarea, optional: true, description: "Custom AI instructions for agent behavior" }
-      gate: "SCT balance >= current agent count + 1"
-
+      quick_deploy:
+        description: "One-click agent with default balanced strategy"
+        fields: "Auto-generated name, balanced risk, no custom instructions"
+      custom_deploy:
+        fields:
+          - { name: name, type: text, validation: "2-30 chars, required" }
+          - { name: risk_level, type: select, options: [conservative, balanced, aggressive, degen], required: true }
+          - { name: strategy_description, type: textarea, optional: true, max_length: 500, description: "Custom instructions for your AI agent's trading behavior" }
     risk_profiles:
-      conservative: "Focus on established tokens, smaller positions (5-15% of budget), high confidence threshold (0.7+), rarely trades"
-      balanced: "Mix of established and trending, moderate positions (10-25%), medium confidence (0.5+)"
-      aggressive: "Trend-chasing, larger positions (15-40%), lower confidence threshold (0.3+), trades frequently"
-      degen: "Maximum risk, massive positions (up to 50%), trades on any signal, YOLO mentality"
+      conservative: "Smaller positions (5-15% of balance), high confidence threshold (0.7+), prefers holding"
+      balanced: "Moderate positions (10-25%), medium confidence (0.5+), balanced approach"
+      aggressive: "Larger positions (15-40%), lower confidence (0.3+), trades frequently"
+      degen: "Massive positions (up to 50%), trades on any signal, YOLO mentality"
+    evaluation_cycle:
+      interval: "Every 30 minutes"
+      implementation: "Vercel Cron calling POST /api/cron/evaluate"
+      flow:
+        1: "System applies random price drift to all pools in active arenas"
+        2: "System applies cash decay to all agent balances"
+        3: "For each active arena, for each agent:"
+        4: "  Gather: current holdings, vUSD cash, recent trades (own + others), pool prices"
+        5: "  Build prompt: portfolio state + all token prices + price changes + risk profile + custom strategy"
+        6: "  AI (Cerebras Llama 3.3 70B) returns structured JSON: { actions: [{ action: BUY|SELL|HOLD, token, amount_vusd, confidence, reasoning }] }"
+        7: "  Execute each action on the AMM: swap vUSD↔TOKEN, update pool reserves + agent balances"
+        8: "  Store trade records and snapshot pool prices"
 
-  trading_loop:
-    schedule: "Every 1 hour (configurable via CRON_INTERVAL_MINUTES)"
-    implementation: "Vercel Cron or Supabase pg_cron calling POST /api/cron"
-    flow:
-      1: "Fetch all active agents from database"
-      2: "For each agent, gather: current holdings, cash balance, recent trades, selected tokens"
-      3: "Fetch live market data from DexScreener for agent's token set"
-      4: "Run sentiment analysis via Cerebras Llama 3.3 70B for each token"
-      5: "Build comprehensive prompt with portfolio state + market data + sentiment + risk profile + personality"
-      6: "AI returns structured JSON decision: { should_trade, reasoning, market_analysis, actions[] }"
-      7: "Each action: { action: BUY|SELL, token, amount_usd, confidence, urgency, reason }"
-      8: "Execute paper trades: BUY deducts cash → creates/updates holding (VWAP); SELL liquidates → returns cash"
-      9: "Store trade records and decision log in database"
+  # ── Betting System (Spectators Only) ───────────────────────────────────
+  betting:
+    currency: "Coliseum Points (CP)"
+    eligibility: "Only users with NO agent in that arena (spectators)"
+    target: "Bet on which agent(s) will finish in top 3"
+    timing: "Bets accepted during upcoming + early active phase, locked at cutoff"
+    resolution:
+      losing_pool: "Total CP from bets on agents that finished outside top 3"
+      agent_owner_share: "50% of losing pool → top 10 arena agent OWNERS"
+      agent_owner_distribution:
+        1st: "25%"
+        2nd: "15%"
+        3rd: "12%"
+        4th_to_10th: "~7% each (split evenly)"
+      bettor_share: "50% of losing pool → winning bettors (proportional to bet size)"
+      winner_payout: "Original bet returned + share of 50% losing pool"
 
-  market_data:
-    source: DexScreener API (free, no key required)
-    endpoint: "https://api.dexscreener.com/latest/dex/search?q={query}"
-    data_points:
-      - price (USD)
-      - price_change_5m, price_change_1h, price_change_6h, price_change_24h
-      - volume_24h
-      - liquidity
-      - market_cap
-      - fdv
+  # ── Coliseum Points (CP) ───────────────────────────────────────────────
+  points:
+    name: "Coliseum Points"
+    abbreviation: "CP"
+    initial_balance: 100 # New users start with 100 CP
+    earning:
+      arena_participation: "10 CP for entering any arena (flat reward)"
+      top_10_finish: "Bonus CP by rank: #1=50, #2=35, #3=25, #4-10=10"
+      winning_bets: "Share of 50% losing bet pool (proportional to bet size)"
+    spending:
+      betting: "Place bets on arena outcomes"
+      future: "Cosmetics, badges, priority arena entry (post-MVP)"
 
-  sentiment_analysis:
-    provider: Cerebras
-    model: llama-3.3-70b
-    input: "Token name + price data + volume + market context"
-    output:
-      - sentiment_score: "float -1.0 to +1.0 (bearish to bullish)"
-      - buzz_level: "integer 0-10"
-      - key_themes: "string[] of trending narratives"
-      - summary: "human-readable market sentiment paragraph"
+  # ── Arena Finalization ─────────────────────────────────────────────────
+  arena_finalization:
+    trigger: "Arena end time reached"
+    steps:
+      1: "Stop all agent evaluations for this arena"
+      2: "Calculate final portfolio value for each agent: sum of (token_holdings × current_pool_price) + vUSD_cash"
+      3: "Rank agents by total portfolio value in vUSD"
+      4: "Distribute CP rewards to top 10 agent owners"
+      5: "Resolve bets: identify winners (bet on top 3), calculate payouts"
+      6: "Generate shareable result cards for all participants"
+      7: "Update user profiles: arena count, wins, best P&L, total trades"
+      8: "Transition arena status to completed"
 
-  leaderboard:
-    ranking_metric: "P&L percentage = ((holdings_value_at_live_prices + current_cash - initial_budget) / initial_budget) * 100"
-    data_points: [rank, agent_name, owner_username, risk_level, initial_budget, total_value, pnl_percent, trade_count]
-    live_prices: "DexScreener prices fetched at query time for accurate real-time ranking"
-    visibility: public # All agents visible regardless of ownership
+  # ── Spectator Mode ─────────────────────────────────────────────────────
+  spectator_mode:
+    access: "No account required — anyone can view"
+    features:
+      - "Live leaderboard updating as trades happen"
+      - "Token price charts (AMM prices over time from pool snapshots)"
+      - "Real-time trade feed (all agents' trades)"
+      - "Arena timer / countdown"
+      - "Agent profiles (name, risk level, current holdings)"
+    landing_page_integration: >
+      The landing page features a live preview of the current active arena.
+      This is the primary conversion tool — visitors see real action, get
+      curious, and sign up to compete or bet.
 
+  # ── Sharing & Virality ─────────────────────────────────────────────────
   sharing:
-    mechanism: "Unique share token generated per agent"
-    route: "/share/[token]"
-    access: "Public, no auth required, read-only"
-    content: "Agent stats, P&L chart, current holdings, recent trades"
+    result_cards:
+      trigger: "Auto-generated when arena completes"
+      content:
+        - "Agent name and owner username"
+        - 'Final rank (e.g., #3 of 20)'
+        - "P&L percentage with color coding"
+        - "Arena name and duration"
+        - "Powered by Silicon Coliseum branding"
+      format: "OG image card (1200x630) for Twitter/X unfurling"
+      share_targets: [twitter, copy_link]
+    arena_links:
+      description: "Shareable URLs for live arena spectating"
+      format: "/arena/[id] — publicly accessible, no auth"
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Supported Meme Tokens (12)
-# ─────────────────────────────────────────────────────────────────────────────
-tokens:
-  - { symbol: PEPE, name: "Pepe", chain: ethereum }
-  - { symbol: WIF, name: "dogwifhat", chain: solana }
-  - { symbol: BONK, name: "Bonk", chain: solana }
-  - { symbol: DOGE, name: "Dogecoin", chain: multi }
-  - { symbol: SHIB, name: "Shiba Inu", chain: ethereum }
-  - { symbol: FLOKI, name: "Floki", chain: ethereum }
-  - { symbol: BRETT, name: "Brett", chain: base }
-  - { symbol: POPCAT, name: "Popcat", chain: solana }
-  - { symbol: MEW, name: "cat in a dogs world", chain: solana }
-  - { symbol: TURBO, name: "Turbo", chain: ethereum }
-  - { symbol: MOG, name: "Mog Coin", chain: ethereum }
-  - { symbol: PENGU, name: "Pudgy Penguins", chain: solana }
+  # ── Leaderboard ────────────────────────────────────────────────────────
+  leaderboard:
+    arena_leaderboard:
+      scope: "Single arena"
+      ranking: "Total portfolio value in vUSD (holdings at AMM prices + cash)"
+      data: [rank, agent_name, owner_username, risk_level, total_value, pnl_percent, trade_count]
+      live: "Updates after each eval cycle"
+    global_leaderboard:
+      scope: "All-time across all completed arenas"
+      ranking: "Average P&L% across arenas participated"
+      data: [rank, username, arenas_competed, wins, avg_pnl, best_pnl, total_trades]
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Environment Variables
@@ -550,10 +573,7 @@ env:
     CEREBRAS_API_KEY: "Cerebras API key for Llama 3.3 70B"
   optional:
     CRON_SECRET: "Secret token to authenticate cron endpoint calls"
-    CRON_INTERVAL_MINUTES: "Trading loop interval (default: 5)"
-    SCT_CONTRACT_ADDRESS: "Deployed SCT contract address on Arbitrum"
-    USDT_CONTRACT_ADDRESS: "USDT contract on Arbitrum (default: 0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9)"
-    RPC_URL: "Arbitrum One RPC URL (default: https://arb1.arbitrum.io/rpc)"
+    JWT_SECRET: "JWT secret for session tokens (if not using Supabase Auth sessions)"
     NEXT_PUBLIC_POSTHOG_KEY: "PostHog analytics key"
     NEXT_PUBLIC_POSTHOG_HOST: "PostHog host URL"
 
@@ -564,165 +584,299 @@ pages:
 
   landing:
     route: "/"
-    layout: "Full marketing page, no auth required"
+    auth: none
+    layout: "Full marketing page with live arena preview"
     sections:
       - hero: >
-          Large gradient heading "The AI Meme Coin Trading Arena" with .shimmer-text effect.
-          Subheading explaining the concept. Two CTAs: "Launch Your Agent" (primary emerald)
-          and "View Leaderboard" (secondary outline). Background: mesh-gradient + interactive
-          particles + cursor follower. Animated floating meme token icons.
+          Large gradient heading "The AI Trading Arena" with .shimmer-text.
+          Subheading: "Deploy autonomous AI agents into competitive trading
+          tournaments. Watch them battle on virtual AMM pools."
+          Two CTAs: "Enter the Arena" (primary emerald) and "Watch Live" (outline).
+          Background: mesh-gradient + interactive particles + cursor follower.
+      - live_arena_preview: >
+          Embedded live view of the current active arena. Shows:
+          mini leaderboard (top 5 agents), 1-2 token price sparklines,
+          trade feed (last 5 trades scrolling). "X agents competing, Y minutes
+          remaining" badge. This is the primary conversion driver — real action,
+          not static marketing. If no arena is active, show the most recently
+          completed arena's results.
       - stats_bar: >
-          Horizontal marquee (animate-marquee) showing live stats: total agents deployed,
-          total paper trades executed, top P&L%, total volume traded. AnimatedCounter on each.
+          Horizontal marquee showing live stats: total arenas completed,
+          total agents deployed, highest P&L% ever, total trades executed.
       - how_it_works: >
-          3-step cards with stagger animation on scroll: 1) Connect Wallet & Hold SCT,
-          2) Deploy Your AI Agent, 3) Compete on the Leaderboard. Each card has icon,
-          title, description, glass styling.
+          3-step cards: 1) Sign Up (email, 30 seconds), 2) Deploy Your AI Agent
+          (pick a strategy, enter an arena), 3) Watch & Win (your agent competes,
+          climb the leaderboard). Glass styling, stagger animation.
       - features_grid: >
-          6-card grid showcasing: AI-Powered Decisions, Live Market Data, Risk Profiles,
-          Global Leaderboard, Paper Trading (Zero Risk), On-Chain Token Gating.
-          Cards use .glass with hover .glass-glow effect. useInView stagger reveal.
-      - live_leaderboard_preview: >
-          Top 5 agents from the real leaderboard. Table with rank medals (gold/silver/bronze),
-          agent name, risk badge, P&L% with color coding. "View Full Leaderboard" CTA.
-      - pricing: >
-          3 SCT tier cards: Starter ($1 = 1 SCT), Pro ($10 = 20 SCT), Whale ($100 = 250 SCT).
-          Middle card highlighted with "Popular" badge. Glass cards with gradient borders.
-      - footer: "Minimal — links, disclaimer about paper trading"
-
-  login:
-    route: "/login"
-    layout: "Centered glassmorphism card over particle background + mesh-gradient"
-    content: >
-      MetaMask fox logo, "Connect Your Wallet" heading, large "Connect MetaMask" button
-      that triggers eth_requestAccounts. On success: check if registered → redirect to
-      dashboard or signup. Error states for: MetaMask not installed, user rejected connection,
-      wrong network.
+          6-card grid: AI-Powered Trading, Virtual AMM Pools, 20-Agent Tournaments,
+          30-Min Trade Cycles, Spectator Betting, Shareable Results.
+      - footer: "Minimal — links, disclaimer about virtual trading"
 
   signup:
     route: "/signup"
+    auth: none
     layout: "Centered glassmorphism card over particle background"
     content: >
-      "Choose Your Username" heading, username input with validation (2-30 chars, alphanumeric
-      + underscores), "Sign & Register" button that triggers MetaMask personal_sign.
-      Success state: animated checkmark with confetti-like particles, auto-redirect to dashboard.
+      Sign up form: email + password, OR social OAuth buttons (Google, GitHub).
+      Username input (2-30 chars, alphanumeric + underscores).
+      On success: animated checkmark, redirect to /arenas.
+
+  login:
+    route: "/login"
+    auth: none
+    layout: "Centered glassmorphism card over particle background"
+    content: >
+      Login form: email + password, OR social OAuth buttons.
+      "Forgot password" link. "Don't have an account? Sign up" link.
+      On success: redirect to /arenas.
+
+  arenas:
+    route: "/arenas"
+    auth: required
+    layout: "Arena browser — list of arenas by status"
+    content: >
+      Three sections:
+      1) Active arenas — currently running, shows spots remaining, time left,
+         agents competing. "Enter Arena" or "Spectate" buttons.
+      2) Upcoming arenas — starting soon, register early. Shows token lineup,
+         starting balance, duration. "Reserve Spot" button.
+      3) Completed arenas — recent results. Shows winner, top P&L%, participant
+         count. "View Results" button.
+      Each arena card: glass styling, name, token icons, agent count (e.g.,
+      "14/20 agents"), countdown timer or "Completed" badge, entry button.
+
+  arena_detail:
+    route: "/arena/[id]"
+    auth: none (spectating) / required (entering)
+    layout: "Full arena view with live data"
+    sections:
+      - header: >
+          Arena name, status badge (active/upcoming/completed), timer/countdown,
+          agent count (e.g., "17/20"), "Enter Arena" button (if spots available
+          and user is logged in), "Place Bet" button (if spectator).
+      - leaderboard: >
+          Live-updating table: rank (medals for top 3), agent name, owner username,
+          risk badge, total value, P&L%, trade count. Current user's agent
+          highlighted. Updates after each eval cycle.
+      - price_charts: >
+          One chart per token in the arena. Shows AMM price over time (from pool
+          snapshots). Line chart with emerald/red coloring based on direction.
+          Token name, current price, price change % badge.
+      - trade_feed: >
+          Real-time scrolling feed of all trades in this arena.
+          Each entry: timestamp, agent name, "BUY 500 MOONCAT at $0.12" or
+          "SELL 200 REKTCOIN at $0.45", trade size in vUSD.
+      - agent_detail_panel: >
+          Click on any agent in leaderboard to see: holdings breakdown,
+          trade history, AI decision reasoning (last 5 decisions).
+      - betting_panel: >
+          For spectators: list of agents with "Bet" buttons. Enter CP amount.
+          Shows current bet totals per agent. Locked indicator if arena started.
+
+  arena_results:
+    route: "/arena/[id]/results"
+    auth: none
+    layout: "Post-arena results page"
+    content: >
+      Final leaderboard with full rankings. Winner spotlight card with
+      agent name, owner, P&L%, total trades. Prize/reward distribution table.
+      Betting results (if user bet). Shareable result card with
+      "Share to Twitter/X" button. "Enter Next Arena" CTA.
 
   dashboard:
     route: "/dashboard"
-    layout: "Server component fetches all data → passes to tabbed client shell"
-    nav: >
-      Sticky top nav: "Silicon Coliseum" brand (gradient-text), tab navigation
-      (Overview, Agents, Leaderboard), right side: SCT balance badge, market ticker toggle,
-      theme toggle, wallet address dropdown (copy address, view on Arbiscan, disconnect).
-    tabs:
-      overview:
-        content: >
-          Top row: 4 stat counters (Total Portfolio Value, Total P&L%, Active Agents,
-          Total Trades) — each with AnimatedCounter and green/red P&L coloring.
-          Middle: portfolio value line chart (framer-motion animated) + P&L breakdown bar chart.
-          Bottom left: active agents quick-view cards (mini version). Bottom right: recent
-          trades feed (last 10, auto-updates). Quick action buttons: "Create Agent",
-          "Buy SCT", "Evaluate Now" (manual trigger).
-      agents:
-        content: >
-          Grid of AgentCards. Each card: glass styling, agent name, risk badge (color-coded),
-          status indicator (green pulse = active, grey = paused), current value, P&L%,
-          token icons row, last trade timestamp. Card actions: View Detail (opens modal),
-          Toggle Active/Paused, Delete (with confirmation dialog). "Create New Agent" card
-          with dashed border and + icon (checks SCT balance, shows upgrade prompt if insufficient).
-          Clicking an agent opens agent-detail-modal.
-      leaderboard:
-        content: >
-          Full-width table: rank (with medal icons for top 3), agent name, owner username,
-          risk level badge, initial budget, current value, P&L% (green/red + arrow),
-          trade count. Sortable columns. Current user's agents highlighted with subtle
-          primary border. Pagination or infinite scroll. Refresh button to fetch latest prices.
-
-  agent_detail:
-    route: "Modal overlay from /dashboard (or /agents/[id] as standalone)"
-    layout: "Full-height dialog/sheet with sections"
+    auth: required
+    layout: "User profile and history"
     sections:
-      - header: "Agent name, risk badge, active/paused status, created date, share button"
-      - stats_row: "4 counters: Current Value, P&L%, Cash Remaining, Total Trades"
-      - holdings: >
-          Table or cards: token icon + symbol, quantity held, avg buy price, current price,
-          unrealized P&L ($ and %), allocation % of portfolio. Optional donut chart visualization.
-      - ai_decisions: >
-          Timeline of recent AI decisions. Each entry: timestamp, should_trade badge (yes/no),
-          market_analysis summary (collapsible), reasoning text, action details if trade was made
-          (token, direction, amount, confidence bar). Expandable raw JSON for debugging.
-      - trade_history: >
-          Paginated table: timestamp, action badge (BUY green / SELL red), token, USD amount,
-          token amount, price at execution, confidence bar, reasoning (tooltip or expandable).
+      - profile_stats: >
+          User profile card: username, CP balance, arenas competed, wins,
+          top 3 finishes, best P&L%, total trades.
+      - active_arenas: >
+          Cards for arenas the user currently has agents in. Shows agent status,
+          current rank, P&L%. Click to go to arena detail.
+      - arena_history: >
+          List of completed arenas with results. Agent name, rank, P&L%,
+          trades made, CP earned. Click to see full result.
+      - betting_history: >
+          Past bets: arena name, agent bet on, CP wagered, outcome, payout.
 
-  buy_sct:
-    route: "/dashboard (via buy-sct-widget or modal)"
-    layout: "Dialog or dedicated section"
-    flow:
-      - step_1: "Display 3 tier cards with pricing, current SCT balance, available agent slots"
-      - step_2: "Selected tier highlighted. Network check — prompt Arbitrum switch if needed"
-      - step_3: "USDT Approve transaction (shows MetaMask popup, loading state)"
-      - step_4: "SCT Purchase transaction (shows MetaMask popup, loading state)"
-      - step_5: "Success — animated SCT balance update, 'Deploy an Agent' CTA"
-    error_states:
-      - "Insufficient USDT balance"
-      - "Transaction rejected by user"
-      - "Network error"
-
-  share:
-    route: "/share/[token]"
-    layout: "Public page, no auth, SSR with service-role Supabase"
-    content: >
-      Agent name heading, owner username, risk badge. Stats: current value, P&L%,
-      cash remaining, total trades. Holdings breakdown with live prices. Recent trades
-      table (last 20). "Powered by Silicon Coliseum" footer with CTA to sign up.
-      Animated progress bars for portfolio allocation. Mesh-gradient background.
+  admin:
+    route: "/admin"
+    auth: admin-only
+    layout: "Admin panel for arena and token management"
+    sections:
+      - create_token: >
+          Form: symbol, name, image_url (optional), description (optional).
+          List of existing platform tokens with edit/delete.
+      - create_arena: >
+          Form: name, description, duration (start/end datetime pickers),
+          starting balance (vUSD), max agents (default 20), decay rate.
+          Token selector (multi-select from platform tokens).
+          For each selected token: set initial pool reserves (TOKEN amount +
+          vUSD amount → shows calculated starting price).
+          Preview of arena config before creation.
+      - manage_arenas: >
+          List of all arenas by status. Actions: start, cancel, view details.
+          Stats: participant count, total trades, current leader.
 
   not_found:
     route: "/*"
-    layout: "Centered content with mesh-gradient background"
-    content: "Large '404' in gradient-text, witty message, 'Back to Arena' button"
+    auth: none
+    layout: "Centered with mesh-gradient background"
+    content: "Large '404' in gradient-text, 'Back to Arena' button"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Smart Contract (Reference — already deployed, not rebuilt)
+# Project Structure
 # ─────────────────────────────────────────────────────────────────────────────
-contract:
-  name: SiliconColesiumToken
-  symbol: SCT
-  standard: ERC-20 + Ownable
-  chain: Arbitrum One (42161)
-  compiler: Solidity 0.8.20
-  framework: Foundry
-  dependencies: [openzeppelin-contracts, forge-std]
-  key_functions:
-    - "purchaseTokens(uint256 tier) — USDT → SCT minting"
-    - "wholeTokenBalance(address) — balanceOf / 1e18 (agent slot count)"
-    - "withdrawUSDT(address, uint256) — owner revenue withdrawal"
-  note: >
-    The contract is already deployed. The frontend interacts with it via ethers.js.
-    The backend reads wholeTokenBalance for agent gating. No contract redeployment needed.
+structure:
+  src:
+    app:
+      layout.tsx: "Root layout — metadata, theme script, fonts (JetBrains Mono + Inter)"
+      page.tsx: "Landing page — hero, live arena preview, stats, how-it-works, features"
+      globals.css: "Tailwind @theme tokens, keyframes, utility classes (.glass, .mesh-gradient, .grain)"
+      not-found.tsx: "Animated 404"
+
+      login:
+        page.tsx: "Email/social login — glassmorphism card"
+      signup:
+        page.tsx: "Email/social signup with username — glassmorphism card"
+
+      arenas:
+        page.tsx: "Arena browser — active, upcoming, completed arenas"
+
+      arena:
+        "[id]":
+          page.tsx: "Arena detail — live leaderboard, price charts, trade feed, betting"
+          results:
+            page.tsx: "Arena results — final rankings, rewards, share cards"
+
+      dashboard:
+        page.tsx: "User profile — stats, active arenas, history, betting history"
+
+      admin:
+        page.tsx: "Admin panel — create tokens, create arenas, manage arenas"
+
+      api:
+        auth:
+          signup/route.ts: "POST — register user (email/social via Supabase Auth)"
+          login/route.ts: "POST — login user"
+          callback/route.ts: "GET — OAuth callback handler"
+        arenas:
+          route.ts: "GET (list arenas by status) + POST (create arena — admin only)"
+          "[id]":
+            route.ts: "GET (arena detail with leaderboard, pools, trades)"
+            enter/route.ts: "POST — enter arena with agent (quick or custom deploy)"
+            leaderboard/route.ts: "GET — live leaderboard for arena"
+            trades/route.ts: "GET — trade feed for arena"
+            bet/route.ts: "POST — place bet on agent (spectators only)"
+        tokens:
+          route.ts: "GET (list platform tokens) + POST (create — admin only)"
+        pools:
+          "[arenaId]/route.ts": "GET — pool prices and snapshots for arena"
+        cron:
+          evaluate/route.ts: "POST — 30-min eval cycle: drift, decay, AI decisions, trades"
+          finalize/route.ts: "POST — finalize completed arenas: rankings, rewards, payouts"
+        user:
+          profile/route.ts: "GET — user profile stats"
+          points/route.ts: "GET — CP balance and history"
+        share:
+          "result/route.ts": "GET — shareable result card data + OG image"
+        health:
+          route.ts: "GET — health check"
+
+    components:
+      ui/: "shadcn/ui components"
+      interactive-particles.tsx: "Canvas particle system with mouse interaction"
+      cursor-follower.tsx: "Radial gradient orb following cursor"
+      animated-counter.tsx: "Count-up animation on scroll visibility"
+      theme-toggle.tsx: "Dark/light toggle"
+      risk-level-badge.tsx: "Color-coded risk badge (conservative=blue, balanced=green, aggressive=amber, degen=red)"
+      pnl-display.tsx: "P&L with green/red coloring and arrows"
+      arena-card.tsx: "Arena card for browser (status, timer, agent count, tokens)"
+      arena-leaderboard.tsx: "Live-updating leaderboard table"
+      price-chart.tsx: "Token price line chart from pool snapshots"
+      trade-feed.tsx: "Scrolling trade feed component"
+      agent-card.tsx: "Agent summary card (name, risk, P&L)"
+      betting-panel.tsx: "Bet placement UI for spectators"
+      result-card.tsx: "Shareable result card component"
+      create-agent-form.tsx: "Agent creation (quick deploy + custom)"
+
+    lib:
+      types.ts: "All TypeScript interfaces — User, Arena, Agent, Pool, Trade, Bet, CP, etc."
+      supabase.ts: "Browser Supabase client"
+      supabase-server.ts: "Server Supabase clients (anon + service role)"
+      utils.ts: "cn() utility"
+      rate-limit.ts: "In-memory rate limiter"
+      amm.ts: "AMM math: calculatePrice, calculateSwapOutput, applyDrift"
+      arena-manager.ts: "Arena lifecycle: create, enter, finalize, leaderboard"
+      agent-engine.ts: "AI decision engine: build prompt, call Cerebras, parse response"
+      trade-executor.ts: "Execute trades on AMM: update pool reserves + agent balances"
+      betting.ts: "Bet placement, resolution, payout calculation"
+      points.ts: "CP balance management: earn, spend, transfer"
+      drift.ts: "Random price drift logic: generate drift factors, apply to pools"
+      auth.ts: "Session management, JWT helpers"
+
+    middleware.ts: "Auth guards + redirects"
+
+  supabase:
+    migrations:
+      "001_arena_platform.sql": >
+        Single migration for the arena-first schema. Tables:
+        - users (id, email, username, avatar_url, cp_balance, created_at)
+        - platform_tokens (id, symbol, name, image_url, description, created_by, created_at)
+          Note: vUSD is a platform_token with symbol 'vUSD'
+        - arenas (id, name, description, status, starting_balance, max_agents,
+          decay_rate, competition_start, competition_end, created_by, created_at)
+        - arena_tokens (arena_id, token_id — which tokens are in this arena)
+        - pools (id, arena_id, token_a [TOKEN], token_b [vUSD], reserve_a, reserve_b,
+          fee_rate, total_volume, created_at)
+        - pool_snapshots (id, pool_id, price, reserve_a, reserve_b, volume, created_at)
+        - agents (id, user_id, arena_id, name, risk_level, strategy_description,
+          cash_balance, status, created_at)
+        - arena_balances (id, arena_id, agent_id, token_id, amount — per agent per token)
+        - arena_trades (id, arena_id, pool_id, agent_id, token_in, token_out,
+          amount_in, amount_out, price, fee, reasoning, created_at)
+        - arena_results (id, arena_id, agent_id, user_id, final_rank, final_value,
+          pnl_percent, reward_cp, trade_count, created_at)
+        - bets (id, arena_id, user_id, agent_id, cp_amount, status [pending/won/lost],
+          payout, created_at)
+        - cp_transactions (id, user_id, amount, type [earn/spend/payout],
+          source [arena_reward/bet_payout/bet_placed/signup_bonus], arena_id, created_at)
+        - user_profiles (id, user_id, total_arenas, wins, top3_finishes, best_pnl,
+          total_trades, created_at)
+        RLS: Public read on arenas, pools, trades, leaderboards. Users manage own
+        agents/bets. Admin role for arena/token creation. Service role for cron jobs.
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Key Implementation Notes
 # ─────────────────────────────────────────────────────────────────────────────
 notes:
   - >
-    Migrate from Express + SQLite to Next.js API routes + Supabase Postgres.
-    All API routes use Zod validation. Row-level security policies enforce ownership.
+    Virtual tokens + AMM: No external market data dependency (no DexScreener).
+    All prices are determined by AMM pool reserves within each arena.
   - >
-    The AI agent evaluation cron can run as a Vercel Cron Job (vercel.json crons config)
-    calling a protected API route, or as a Supabase Edge Function with pg_cron.
+    Random price drift runs BEFORE agent evaluation each cycle, ensuring
+    prices are always moving and agents always have opportunities.
   - >
-    DexScreener API is free and requires no API key. Rate limit requests to avoid throttling.
+    Authentication is email/social via Supabase Auth. No MetaMask or crypto
+    wallet required. This maximizes signup conversion.
   - >
-    MetaMask auth flow: use Supabase custom auth or a simple session token approach.
-    The wallet address is the primary identity; Supabase auth can wrap this.
+    SCT token gating is removed for MVP. All users can create agents freely.
+    Monetization can be added later via premium features or real-money betting.
   - >
-    All glassmorphism, particles, animations, and design tokens should be ported from
-    the Launchpad-mvp globals.css and component patterns, re-themed for the crypto arena aesthetic.
+    The 20-agent cap creates natural scarcity and urgency, which drives
+    faster signups and arena engagement.
   - >
-    framer-motion should be used for all transitions, not CSS-only transitions, to match
-    the premium feel of the template.
+    AI agents use Cerebras Llama 3.3 70B via OpenAI-compatible SDK.
+    Each agent gets a tailored prompt including risk profile, current holdings,
+    all pool prices, recent trades by all agents, and custom strategy instructions.
   - >
-    PostHog analytics integration is optional but recommended — proxy through Next.js
-    rewrites to avoid adblockers (same pattern as Launchpad-mvp).
+    Shareable result cards are the primary viral mechanic. Auto-generated
+    OG images with arena results for Twitter/X sharing.
+  - >
+    Admin panel is minimal — create tokens, create arenas with pool configs,
+    manage arena lifecycle. No public-facing admin features.
+  - >
+    Vercel Cron handles the 30-minute eval cycle. Two cron jobs:
+    1) /api/cron/evaluate — drift + decay + AI decisions for active arenas
+    2) /api/cron/finalize — check for arenas past end time and finalize them

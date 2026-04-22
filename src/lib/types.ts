@@ -1,32 +1,264 @@
-// User from Supabase users table
+// ============================================================================
+// Silicon Coliseum — Core Types (Arena-First Model)
+// ============================================================================
+
+// --- User & Auth ---
+
 export interface User {
   id: string;
+  authId: string;
+  email: string;
   username: string;
-  wallet_address: string;
-  signature: string;
-  message: string;
-  created_at: string;
+  avatarUrl: string | null;
+  isAdmin: boolean;
+  cpBalance: number;
+  createdAt: string;
 }
 
-// Agent from agents table
+// --- Platform Tokens ---
+
+export interface PlatformToken {
+  id: string;
+  symbol: string;
+  name: string;
+  imageUrl: string | null;
+  description: string | null;
+  isBaseCurrency: boolean;
+  createdAt: string;
+}
+
+// --- Arena ---
+
+export type ArenaStatus = "upcoming" | "active" | "completed" | "cancelled";
+
+export interface Arena {
+  id: string;
+  name: string;
+  description: string | null;
+  status: ArenaStatus;
+  startingBalance: number;
+  maxAgents: number;
+  decayRate: number;
+  competitionStart: string | null;
+  competitionEnd: string | null;
+  createdBy: string | null;
+  createdAt: string;
+}
+
+export interface ArenaToken {
+  id: string;
+  arenaId: string;
+  tokenId: string;
+}
+
+// --- AMM Pools ---
+
+export interface Pool {
+  id: string;
+  arenaId: string;
+  tokenId: string;
+  baseTokenId: string;
+  reserveToken: number;
+  reserveBase: number;
+  feeRate: number;
+  totalVolume: number;
+}
+
+export interface PoolSnapshot {
+  id: string;
+  poolId: string;
+  price: number;
+  reserveToken: number;
+  reserveBase: number;
+  volume: number;
+  createdAt: string;
+}
+
+// --- Agents ---
+
+export type RiskLevel = "conservative" | "balanced" | "aggressive" | "degen";
+export type AgentStatus = "active" | "eliminated" | "finished";
+
 export interface Agent {
   id: string;
-  user_id: string;
+  userId: string;
+  arenaId: string;
   name: string;
-  risk_level: "conservative" | "balanced" | "aggressive" | "degen";
-  initial_budget: number;
-  current_balance: number;
-  tokens: string[]; // Legacy — kept for backward compat
-  is_active: boolean;
-  personality: string | null;
-  strategy_description: string | null;
-  is_npc: boolean;
-  created_at: string;
-  // Joined fields
-  username?: string;
+  riskLevel: RiskLevel;
+  strategyDescription: string | null;
+  cashBalance: number;
+  status: AgentStatus;
+  createdAt: string;
 }
 
-// Holding from holdings table (unique agent_id + token) — legacy
+// --- Arena Balances & Trades ---
+
+export interface ArenaBalance {
+  id: string;
+  arenaId: string;
+  agentId: string;
+  tokenId: string;
+  amount: number;
+}
+
+export type TradeAction = "BUY" | "SELL";
+
+export interface ArenaTrade {
+  id: string;
+  arenaId: string;
+  poolId: string;
+  agentId: string;
+  action: TradeAction;
+  tokenId: string;
+  amountIn: number;
+  amountOut: number;
+  price: number;
+  fee: number;
+  reasoning: string | null;
+  createdAt: string;
+}
+
+// --- Arena Results ---
+
+export interface ArenaResult {
+  id: string;
+  arenaId: string;
+  agentId: string;
+  userId: string;
+  finalRank: number;
+  finalValue: number;
+  pnlPercent: number;
+  rewardCp: number;
+  tradeCount: number;
+}
+
+// --- Betting ---
+
+export type BetStatus = "pending" | "won" | "lost";
+
+export interface Bet {
+  id: string;
+  arenaId: string;
+  userId: string;
+  agentId: string;
+  cpAmount: number;
+  status: BetStatus;
+  payout: number;
+  createdAt: string;
+}
+
+// --- Coliseum Points ---
+
+export type CpTransactionType = "earn" | "spend" | "payout";
+
+export interface CpTransaction {
+  id: string;
+  userId: string;
+  amount: number;
+  type: CpTransactionType;
+  source: string;
+  arenaId: string | null;
+  createdAt: string;
+}
+
+// --- User Profiles ---
+
+export interface UserProfile {
+  id: string;
+  userId: string;
+  totalArenas: number;
+  wins: number;
+  top3Finishes: number;
+  bestPnl: number;
+  totalTrades: number;
+}
+
+// --- Leaderboard ---
+
+export interface LeaderboardEntry {
+  rank: number;
+  agentId: string;
+  agentName: string;
+  ownerUsername: string;
+  riskLevel: RiskLevel;
+  totalValue: number;
+  pnlPercent: number;
+  tradeCount: number;
+  cashBalance: number;
+}
+
+// --- AI Decision Types ---
+
+export interface AIAction {
+  action: "BUY" | "SELL" | "HOLD";
+  tokenSymbol: string;
+  amountVusd: number;
+  confidence: number;
+  reasoning: string;
+}
+
+export interface AIDecision {
+  actions: AIAction[];
+}
+
+// ============================================================================
+// Legacy compatibility aliases (used by existing pages/components/tests)
+// ============================================================================
+
+/** @deprecated Use ArenaStatus instead */
+export type ArenaPhase = "prep" | "competition" | "challenge" | "rewards" | "closed";
+
+/** @deprecated Legacy swap result shape */
+export interface SwapResult {
+  amountOut: number;
+  fee: number;
+  priceImpact: number;
+  executionPrice: number;
+  newReserveIn: number;
+  newReserveOut: number;
+}
+
+/** @deprecated Legacy NPC config */
+export interface NpcConfig {
+  strategy: "random_walk" | "mean_reversion" | "volume_injection";
+  tradeFrequency: number;
+  maxTradeSize: number;
+  volatilityTarget: number;
+}
+
+/** @deprecated Legacy pool analysis for AI context */
+export interface PoolAnalysis {
+  poolId: string;
+  tokenA: string;
+  tokenB: string;
+  currentPrice: number;
+  priceChange1h: number;
+  priceChange24h: number;
+  momentum: number;
+  volatility: number;
+  volume24h: number;
+  liquidityDepth: number;
+  narrative: string;
+}
+
+/** @deprecated Legacy arena AI decision response */
+export interface ArenaAIDecisionResponse {
+  should_trade: boolean;
+  reasoning: string;
+  market_analysis: string;
+  actions: ArenaTradeAction[];
+}
+
+/** @deprecated Legacy arena trade action */
+export interface ArenaTradeAction {
+  pool_id: string;
+  token_in: string;
+  token_out: string;
+  amount_in: number;
+  reason: string;
+}
+
+/** @deprecated Legacy types for backward compat */
 export interface Holding {
   id: string;
   agent_id: string;
@@ -35,7 +267,7 @@ export interface Holding {
   avg_buy_price: number;
 }
 
-// Trade from trades table — legacy
+/** @deprecated Legacy trade type */
 export interface Trade {
   id: string;
   agent_id: string;
@@ -49,7 +281,7 @@ export interface Trade {
   created_at: string;
 }
 
-// AI Decision from decisions table
+/** @deprecated Legacy decision type */
 export interface Decision {
   id: string;
   agent_id: string;
@@ -60,7 +292,7 @@ export interface Decision {
   created_at: string;
 }
 
-// Share token from share_tokens table
+/** @deprecated Legacy share token */
 export interface ShareToken {
   id: string;
   agent_id: string;
@@ -68,216 +300,7 @@ export interface ShareToken {
   created_at: string;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Arena V2 Types
-// ─────────────────────────────────────────────────────────────────────────────
-
-// Virtual token on the platform
-export interface PlatformToken {
-  id: string;
-  symbol: string;
-  name: string;
-  image_url: string | null;
-  description: string | null;
-  created_by: string | null;
-  created_at: string;
-}
-
-// Arena lifecycle phases
-export type ArenaPhase = "prep" | "competition" | "challenge" | "rewards" | "closed";
-
-// Arena status
-export type ArenaStatus = "draft" | "active" | "completed" | "cancelled";
-
-// Arena — competition instance
-export interface Arena {
-  id: string;
-  name: string;
-  description: string | null;
-  status: ArenaStatus;
-  phase: ArenaPhase;
-  entry_fee: number;
-  prize_pool: number;
-  starting_balance: number;
-  max_agents_per_user: number;
-  competition_start: string | null;
-  competition_end: string | null;
-  challenge_end: string | null;
-  decay_rate: number;
-  created_by: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-// AMM pool for token pair in an arena
-export interface Pool {
-  id: string;
-  arena_id: string;
-  token_a: string; // platform_token id
-  token_b: string; // platform_token id
-  reserve_a: number;
-  reserve_b: number;
-  fee_rate: number;
-  total_volume: number;
-  created_at: string;
-  updated_at: string;
-  // Joined
-  token_a_symbol?: string;
-  token_b_symbol?: string;
-  token_a_name?: string;
-  token_b_name?: string;
-}
-
-// Pool snapshot for price history
-export interface PoolSnapshot {
-  id: string;
-  pool_id: string;
-  price: number;
-  reserve_a: number;
-  reserve_b: number;
-  volume: number;
-  created_at: string;
-}
-
-// Agent registered in an arena
-export interface ArenaEntry {
-  id: string;
-  arena_id: string;
-  agent_id: string;
-  user_id: string;
-  is_npc: boolean;
-  status: "registered" | "active" | "eliminated" | "finished";
-  created_at: string;
-}
-
-// Per-agent per-token balance within an arena
-export interface ArenaBalance {
-  id: string;
-  arena_id: string;
-  agent_id: string;
-  token_id: string; // platform_token id
-  amount: number;
-  updated_at: string;
-  // Joined
-  token_symbol?: string;
-}
-
-// Swap record in an arena
-export interface ArenaTrade {
-  id: string;
-  arena_id: string;
-  pool_id: string;
-  agent_id: string;
-  token_in: string; // platform_token id
-  token_out: string; // platform_token id
-  amount_in: number;
-  amount_out: number;
-  price: number;
-  fee: number;
-  reasoning: string | null;
-  created_at: string;
-  // Joined
-  token_in_symbol?: string;
-  token_out_symbol?: string;
-}
-
-// Final rankings per arena
-export interface ArenaResult {
-  id: string;
-  arena_id: string;
-  agent_id: string;
-  user_id: string;
-  final_rank: number;
-  final_value: number;
-  pnl_percent: number;
-  reward_amount: number;
-  trade_count: number;
-  created_at: string;
-  // Joined
-  agent_name?: string;
-  username?: string;
-}
-
-// Aggregated user stats
-export interface UserProfile {
-  id: string;
-  user_id: string;
-  total_arenas: number;
-  wins: number;
-  top3_finishes: number;
-  best_pnl: number;
-  total_trades: number;
-  reputation: number;
-  updated_at: string;
-}
-
-// AMM swap result
-export interface SwapResult {
-  amountOut: number;
-  fee: number;
-  priceImpact: number;
-  executionPrice: number;
-  newReserveIn: number;
-  newReserveOut: number;
-}
-
-// NPC bot configuration
-export interface NpcConfig {
-  strategy: "random_walk" | "mean_reversion" | "volume_injection";
-  tradeFrequency: number; // 0-1, probability of trading each tick
-  maxTradeSize: number; // max % of balance to trade
-  volatilityTarget: number; // target volatility for mean reversion
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// AI Response types (updated for arena model)
-// ─────────────────────────────────────────────────────────────────────────────
-
-export interface ArenaTradeAction {
-  pool_id: string;
-  token_in: string; // token symbol
-  token_out: string; // token symbol
-  amount_in: number;
-  reason: string;
-}
-
-export interface ArenaAIDecisionResponse {
-  should_trade: boolean;
-  reasoning: string;
-  market_analysis: string;
-  actions: ArenaTradeAction[];
-}
-
-// Leaderboard entry (arena-scoped)
-export interface LeaderboardEntry {
-  rank: number;
-  agentId: string;
-  agentName: string;
-  ownerUsername: string;
-  riskLevel: Agent["risk_level"];
-  initialBudget: number;
-  totalValue: number;
-  pnlPercent: number;
-  tradeCount: number;
-  isNpc?: boolean;
-}
-
-// Pool analysis for AI context
-export interface PoolAnalysis {
-  poolId: string;
-  tokenA: string;
-  tokenB: string;
-  currentPrice: number;
-  priceChange1h: number;
-  priceChange24h: number;
-  momentum: number; // -1 to 1
-  volatility: number;
-  volume24h: number;
-  liquidityDepth: number;
-  narrative: string;
-}
-
-// Token info for the 12 supported meme tokens (legacy)
+/** @deprecated Legacy token info */
 export interface TokenInfo {
   symbol: string;
   name: string;
@@ -286,7 +309,7 @@ export interface TokenInfo {
   icon?: string;
 }
 
-// Market data from DexScreener (legacy)
+/** @deprecated Legacy market data */
 export interface MarketData {
   symbol: string;
   name: string;
@@ -301,7 +324,7 @@ export interface MarketData {
   fdv: number;
 }
 
-// Sentiment analysis result (legacy)
+/** @deprecated Legacy sentiment data */
 export interface SentimentData {
   token: string;
   sentimentScore: number;
@@ -310,7 +333,7 @@ export interface SentimentData {
   summary: string;
 }
 
-// AI decision response (legacy)
+/** @deprecated Legacy AI trade action */
 export interface AITradeAction {
   action: "BUY" | "SELL";
   token: string;
@@ -320,9 +343,21 @@ export interface AITradeAction {
   reason: string;
 }
 
+/** @deprecated Legacy AI decision response */
 export interface AIDecisionResponse {
   should_trade: boolean;
   reasoning: string;
   market_analysis: string;
   actions: AITradeAction[];
+}
+
+/** @deprecated Legacy arena entry */
+export interface ArenaEntry {
+  id: string;
+  arena_id: string;
+  agent_id: string;
+  user_id: string;
+  is_npc: boolean;
+  status: "registered" | "active" | "eliminated" | "finished";
+  created_at: string;
 }

@@ -1,54 +1,56 @@
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import { createServiceClient } from "@/lib/supabase-server";
+import { getArenaDetail } from "@/lib/arena-manager";
+import { calculatePrice } from "@/lib/amm";
+import { rateLimit } from "@/lib/rate-limit";
 
 export async function GET(
-  _request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
-    const supabase = createServiceClient();
+    const ip =
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
 
-    // Fetch arena
-    const { data: arena, error: arenaError } = await supabase
-      .from("arenas")
-      .select("*")
-      .eq("id", id)
-      .single();
-
-    if (arenaError && arenaError.code !== "PGRST116") {
-      console.error("Failed to fetch arena:", arenaError);
+    const limit = rateLimit(ip, "read");
+    if (!limit.success) {
       return NextResponse.json(
-        { error: "Failed to fetch arena" },
-        { status: 500 }
+        { error: "Too many requests" },
+        { status: 429 }
       );
     }
 
-    if (!arena) {
-      return NextResponse.json({ error: "Arena not found" }, { status: 404 });
-    }
+    const { id } = await params;
+    const supabase = createServiceClient();
 
-    // Fetch arena tokens with joined platform_tokens info
-    const { data: arenaTokens } = await supabase
-      .from("arena_tokens")
-      .select("*, platform_tokens(symbol, name, image_url)")
-      .eq("arena_id", id);
+    const detail = await getArenaDetail(supabase, id);
 
-    // Count arena entries
-    const { count: entryCount } = await supabase
-      .from("arena_entries")
-      .select("*", { count: "exact", head: true })
-      .eq("arena_id", id);
+    // Enrich pools with current prices
+    const poolsWithPrices = detail.pools.map((pool) => {
+      let currentPrice = 0;
+      try {
+        currentPrice = calculatePrice(pool.reserveToken, pool.reserveBase);
+      } catch {
+        // Invalid reserves
+      }
+      return {
+        ...pool,
+        currentPrice,
+      };
+    });
 
     return NextResponse.json({
-      arena,
-      tokens: arenaTokens || [],
-      entryCount: entryCount ?? 0,
+      arena: detail.arena,
+      pools: poolsWithPrices,
+      agents: detail.agents,
+      recentTrades: detail.recentTrades,
     });
-  } catch {
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Internal server error";
+    const status = message.includes("not found") ? 404 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

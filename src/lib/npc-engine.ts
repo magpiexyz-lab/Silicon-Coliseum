@@ -1,7 +1,28 @@
 import { createServiceClient } from "./supabase-server";
 import { executeSwap } from "./pool-manager";
 import { calculatePrice } from "./amm";
-import type { NpcConfig, Pool, ArenaBalance } from "./types";
+import type { NpcConfig } from "./types";
+
+/** Raw pool row from Supabase (snake_case columns) */
+interface RawPool {
+  id: string;
+  arena_id: string;
+  token_a: string;
+  token_b: string;
+  reserve_a: number;
+  reserve_b: number;
+  fee_rate: number;
+  total_volume: number;
+}
+
+/** Raw arena balance row from Supabase (snake_case columns) */
+interface RawArenaBalance {
+  id: string;
+  arena_id: string;
+  agent_id: string;
+  token_id: string;
+  amount: number;
+}
 
 /**
  * NPC Engine — bot market makers that create baseline volume.
@@ -71,7 +92,7 @@ export async function runNpcTrading(arenaId: string): Promise<number> {
       const tradesExecuted = await executeNpcTrade(
         arenaId,
         agent.id,
-        pools as Pool[],
+        pools as RawPool[],
         config
       );
       totalTrades += tradesExecuted;
@@ -94,7 +115,7 @@ function parseNpcStrategy(description: string | null): NpcConfig["strategy"] {
 async function executeNpcTrade(
   arenaId: string,
   agentId: string,
-  pools: Pool[],
+  pools: RawPool[],
   config: NpcConfig
 ): Promise<number> {
   const supabase = createServiceClient();
@@ -113,11 +134,11 @@ async function executeNpcTrade(
 
   switch (config.strategy) {
     case "random_walk":
-      return executeRandomWalk(arenaId, agentId, pool, balances as ArenaBalance[], config);
+      return executeRandomWalk(arenaId, agentId, pool, balances as RawArenaBalance[], config);
     case "mean_reversion":
-      return executeMeanReversion(arenaId, agentId, pool, balances as ArenaBalance[], config);
+      return executeMeanReversion(arenaId, agentId, pool, balances as RawArenaBalance[], config);
     case "volume_injection":
-      return executeVolumeInjection(arenaId, agentId, pool, balances as ArenaBalance[], config);
+      return executeVolumeInjection(arenaId, agentId, pool, balances as RawArenaBalance[], config);
     default:
       return 0;
   }
@@ -126,8 +147,8 @@ async function executeNpcTrade(
 async function executeRandomWalk(
   arenaId: string,
   agentId: string,
-  pool: Pool,
-  balances: ArenaBalance[],
+  pool: RawPool,
+  balances: RawArenaBalance[],
   config: NpcConfig
 ): Promise<number> {
   // Randomly buy or sell
@@ -147,8 +168,8 @@ async function executeRandomWalk(
 async function executeMeanReversion(
   arenaId: string,
   agentId: string,
-  pool: Pool,
-  balances: ArenaBalance[],
+  pool: RawPool,
+  balances: RawArenaBalance[],
   config: NpcConfig
 ): Promise<number> {
   const supabase = createServiceClient();
@@ -196,8 +217,8 @@ async function executeMeanReversion(
 async function executeVolumeInjection(
   arenaId: string,
   agentId: string,
-  pool: Pool,
-  balances: ArenaBalance[],
+  pool: RawPool,
+  balances: RawArenaBalance[],
   config: NpcConfig
 ): Promise<number> {
   // Small trades in both directions to create volume

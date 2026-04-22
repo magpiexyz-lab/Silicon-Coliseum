@@ -2,12 +2,21 @@ import type { SwapResult } from "./types";
 
 /**
  * Constant Product AMM (x * y = k)
- * All functions are pure — no database access.
+ * All functions are pure -- no database access.
  */
 
 /**
+ * Calculate spot price of token in vUSD.
+ * price = reserveBase / reserveToken
+ */
+export function calculatePrice(reserveToken: number, reserveBase: number): number {
+  if (reserveToken <= 0 || reserveBase <= 0) throw new Error("Reserves must be positive");
+  return reserveBase / reserveToken;
+}
+
+/**
  * Calculate swap output using constant product formula.
- * output = reserve_out - (k / (reserve_in + input_after_fee))
+ * output = reserveOut - (k / (reserveIn + inputAfterFee))
  */
 export function calculateSwapOutput(
   amountIn: number,
@@ -40,31 +49,59 @@ export function calculateSwapOutput(
     priceImpact,
     executionPrice,
     newReserveIn: reserveIn + amountIn, // Full amount (including fee) goes to reserves
-    newReserveOut: newReserveOut,
+    newReserveOut,
   };
 }
 
 /**
- * Calculate spot price (price of token_a in terms of token_b).
- * price = reserve_b / reserve_a
+ * Reverse calculation: given desired amountOut, compute required amountIn.
  */
-export function calculatePrice(reserveA: number, reserveB: number): number {
-  if (reserveA <= 0 || reserveB <= 0) throw new Error("Reserves must be positive");
-  return reserveB / reserveA;
+export function calculateSwapInput(
+  amountOut: number,
+  reserveIn: number,
+  reserveOut: number,
+  feeRate: number = 0.003
+): { amountIn: number; fee: number } {
+  if (amountOut <= 0) throw new Error("Amount out must be positive");
+  if (reserveIn <= 0 || reserveOut <= 0) throw new Error("Reserves must be positive");
+  if (amountOut >= reserveOut) throw new Error("Amount exceeds available liquidity");
+  if (feeRate < 0 || feeRate >= 1) throw new Error("Fee rate must be between 0 and 1");
+
+  const k = reserveIn * reserveOut;
+  const newReserveOut = reserveOut - amountOut;
+  const requiredReserveIn = k / newReserveOut;
+  const amountInAfterFee = requiredReserveIn - reserveIn;
+  const amountIn = amountInAfterFee / (1 - feeRate);
+  const fee = amountIn * feeRate;
+
+  return { amountIn, fee };
 }
 
 /**
- * Calculate price impact for a given trade size.
+ * Calculate price impact as a percentage for a given trade.
+ * When reserveOut and feeRate are provided, uses full swap calculation.
+ * Otherwise uses simplified approximation: amountIn / reserveIn.
  */
 export function calculatePriceImpact(
   amountIn: number,
   reserveIn: number,
-  reserveOut: number,
-  feeRate: number = 0.003
+  reserveOut?: number,
+  feeRate?: number
 ): number {
-  const result = calculateSwapOutput(amountIn, reserveIn, reserveOut, feeRate);
-  return result.priceImpact;
+  if (amountIn <= 0 || reserveIn <= 0) return 0;
+  if (reserveOut !== undefined && reserveOut > 0) {
+    const result = calculateSwapOutput(amountIn, reserveIn, reserveOut, feeRate ?? 0.003);
+    return result.priceImpact;
+  }
+  return amountIn / reserveIn;
 }
+
+// ============================================================================
+// Legacy compatibility exports (used by existing code)
+// ============================================================================
+
+/** @deprecated Alias for calculateSwapOutput (identical). */
+export const calculateSwapOutputFull = calculateSwapOutput;
 
 /**
  * Find a route between two tokens through available pools.
@@ -103,12 +140,11 @@ export function findRoute(
     if (poolB) return [poolA.id, poolB.id];
   }
 
-  return []; // No route found
+  return [];
 }
 
 /**
  * Calculate multi-hop swap output.
- * Chains swaps through multiple pools.
  */
 export function calculateMultiHopSwap(
   amountIn: number,
@@ -123,7 +159,7 @@ export function calculateMultiHopSwap(
   let totalPriceImpact = 0;
 
   for (const hop of route) {
-    const result = calculateSwapOutput(
+    const result = calculateSwapOutputFull(
       currentAmount,
       hop.reserveIn,
       hop.reserveOut,
@@ -150,7 +186,6 @@ export function addLiquidity(
   reserveB: number
 ): { amountA: number; amountB: number; newReserveA: number; newReserveB: number } {
   if (reserveA === 0 && reserveB === 0) {
-    // Initial liquidity — caller must provide both
     throw new Error("Cannot add single-sided liquidity to empty pool");
   }
 
