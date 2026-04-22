@@ -61,11 +61,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Sign up with Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-    });
+    // Create user with Supabase Auth (admin API to skip email confirmation)
+    const { data: authData, error: authError } =
+      await supabase.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+      });
 
     if (authError) {
       return NextResponse.json(
@@ -144,7 +146,8 @@ export async function POST(request: NextRequest) {
     setSessionCookie(response, token);
 
     return response;
-  } catch {
+  } catch (error) {
+    console.error("Signup error:", error);
     return NextResponse.json(
       { error: "Invalid request body" },
       { status: 400 }

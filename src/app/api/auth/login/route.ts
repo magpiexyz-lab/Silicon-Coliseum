@@ -102,7 +102,8 @@ export async function POST(request: NextRequest) {
     setSessionCookie(response, token);
 
     return response;
-  } catch {
+  } catch (error) {
+    console.error("Login error:", error);
     return NextResponse.json(
       { error: "Invalid request body" },
       { status: 400 }
