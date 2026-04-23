@@ -1,6 +1,8 @@
 import { NextResponse, NextRequest } from "next/server";
 import { z } from "zod";
 import { createServiceClient } from "@/lib/supabase-server";
+import { createSession, setSessionCookie } from "@/lib/auth";
+import { awardSignupBonus } from "@/lib/points";
 import { rateLimit } from "@/lib/rate-limit";
 
 const SignupSchema = z.object({
@@ -59,15 +61,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Use auth.signUp to trigger email verification
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { username },
-        emailRedirectTo: `${request.nextUrl.origin}/api/auth/callback`,
-      },
-    });
+    // Create user with Supabase Auth (admin API to skip email confirmation)
+    const { data: authData, error: authError } =
+      await supabase.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+      });
 
     if (authError) {
       return NextResponse.json(
@@ -78,17 +78,74 @@ export async function POST(request: NextRequest) {
 
     if (!authData.user) {
       return NextResponse.json(
-        { error: "Failed to create account" },
+        { error: "Failed to create auth user" },
         { status: 500 }
       );
     }
 
-    // User created but needs to verify email
-    // The callback route will create the users/user_profiles rows and set session
-    return NextResponse.json({
-      needsVerification: true,
-      message: "Check your email for a verification link.",
+    const authId = authData.user.id;
+
+    // Insert into users table
+    const { data: user, error: insertError } = await supabase
+      .from("users")
+      .insert({
+        email,
+        username,
+        auth_id: authId,
+        cp_balance: 0,
+        is_admin: false,
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error("Signup insert error:", insertError);
+      return NextResponse.json(
+        { error: "Failed to create user" },
+        { status: 500 }
+      );
+    }
+
+    // Create user_profiles entry
+    await supabase.from("user_profiles").insert({
+      user_id: user.id,
+      total_arenas: 0,
+      wins: 0,
+      top3_finishes: 0,
+      best_pnl: 0,
+      total_trades: 0,
     });
+
+    // Award 100 CP signup bonus
+    try {
+      await awardSignupBonus(supabase, user.id);
+    } catch {
+      // Non-fatal: user created but bonus failed
+    }
+
+    // Re-fetch user to get updated cp_balance
+    const { data: updatedUser } = await supabase
+      .from("users")
+      .select("*")
+      .eq("id", user.id)
+      .single();
+
+    // Create JWT session
+    const token = await createSession(user.id, email);
+
+    const response = NextResponse.json({
+      success: true,
+      user: {
+        id: updatedUser?.id || user.id,
+        email: updatedUser?.email || email,
+        username: updatedUser?.username || username,
+        cpBalance: updatedUser?.cp_balance ?? 0,
+        isAdmin: updatedUser?.is_admin ?? false,
+      },
+    });
+    setSessionCookie(response, token);
+
+    return response;
   } catch (error) {
     console.error("Signup error:", error);
     return NextResponse.json(

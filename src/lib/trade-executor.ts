@@ -36,18 +36,18 @@ export async function executeBuy(
 
   if (poolError || !pool) throw new Error("Pool not found");
 
-  // Fetch agent
-  const { data: agent, error: agentError } = await supabase
-    .from("agents")
+  // Fetch agent cash balance from arena_entries
+  const { data: entry, error: entryError } = await supabase
+    .from("arena_entries")
     .select("cash_balance")
-    .eq("id", agentId)
+    .eq("agent_id", agentId)
     .eq("arena_id", arenaId)
     .single();
 
-  if (agentError || !agent) throw new Error("Agent not found");
-  if (agent.cash_balance < amountVusd)
+  if (entryError || !entry) throw new Error("Agent not found in arena");
+  if (entry.cash_balance < amountVusd)
     throw new Error(
-      `Insufficient cash: have ${agent.cash_balance}, need ${amountVusd}`
+      `Insufficient cash: have ${entry.cash_balance}, need ${amountVusd}`
     );
 
   // Calculate swap: vUSD (base) -> TOKEN
@@ -75,11 +75,12 @@ export async function executeBuy(
     })
     .eq("id", poolId);
 
-  // Deduct agent cash
+  // Deduct agent cash on arena_entries
   await supabase
-    .from("agents")
-    .update({ cash_balance: agent.cash_balance - amountVusd })
-    .eq("id", agentId);
+    .from("arena_entries")
+    .update({ cash_balance: entry.cash_balance - amountVusd })
+    .eq("agent_id", agentId)
+    .eq("arena_id", arenaId);
 
   // Update arena_balances: add TOKEN
   const { data: existingBalance } = await supabase
@@ -202,18 +203,20 @@ export async function executeSell(
     .update({ amount: balance.amount - tokenAmount })
     .eq("id", balance.id);
 
-  // Add vUSD to agent cash
-  const { data: agent } = await supabase
-    .from("agents")
+  // Add vUSD to agent cash on arena_entries
+  const { data: entry } = await supabase
+    .from("arena_entries")
     .select("cash_balance")
-    .eq("id", agentId)
+    .eq("agent_id", agentId)
+    .eq("arena_id", arenaId)
     .single();
 
-  if (agent) {
+  if (entry) {
     await supabase
-      .from("agents")
-      .update({ cash_balance: agent.cash_balance + amountOut })
-      .eq("id", agentId);
+      .from("arena_entries")
+      .update({ cash_balance: entry.cash_balance + amountOut })
+      .eq("agent_id", agentId)
+      .eq("arena_id", arenaId);
   }
 
   // Record trade

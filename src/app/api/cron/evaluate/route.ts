@@ -8,15 +8,28 @@ import type { Pool, Agent, ArenaTrade } from "@/lib/types";
 
 export async function POST(request: NextRequest) {
   try {
-    // Verify CRON_SECRET
+    // Verify authorization: CRON_SECRET or admin user
     const cronSecret = request.headers.get("x-cron-secret") ||
       request.headers.get("authorization")?.replace("Bearer ", "");
 
-    if (!process.env.CRON_SECRET || cronSecret !== process.env.CRON_SECRET) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+    const isCronAuth = process.env.CRON_SECRET && cronSecret === process.env.CRON_SECRET;
+
+    if (!isCronAuth) {
+      // Check if request is from an admin user
+      const { getSession } = await import("@/lib/auth");
+      const session = await getSession(request);
+      if (!session) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+      const supabaseAuth = createServiceClient();
+      const { data: adminUser } = await supabaseAuth
+        .from("users")
+        .select("is_admin")
+        .eq("id", session.userId)
+        .maybeSingle();
+      if (!adminUser?.is_admin) {
+        return NextResponse.json({ error: "Admin access required" }, { status: 403 });
+      }
     }
 
     const supabase = createServiceClient();
@@ -86,35 +99,41 @@ export async function POST(request: NextRequest) {
           summary.driftsApplied++;
         }
 
-        // 3. Fetch all active agents and apply cash decay
-        const { data: agentRows } = await supabase
-          .from("agents")
-          .select("*")
+        // 3. Fetch all active agents via arena_entries and apply cash decay
+        const { data: entryRows } = await supabase
+          .from("arena_entries")
+          .select("*, agents(*)")
           .eq("arena_id", arenaId)
           .eq("status", "active");
 
-        const agents: Agent[] = (agentRows || []).map((a) => ({
-          id: a.id,
-          userId: a.user_id,
-          arenaId: a.arena_id,
-          name: a.name,
-          riskLevel: a.risk_level || "balanced",
-          strategyDescription: a.strategy_description || null,
-          cashBalance: a.cash_balance || 0,
-          status: a.status || "active",
-          totalArenas: a.total_arenas || 0,
-          totalWins: a.total_wins || 0,
-          bestPnl: a.best_pnl || 0,
-          createdAt: a.created_at,
-        }));
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const agents: Agent[] = (entryRows || []).map((entry: any) => {
+          const a = entry.agents;
+          return {
+            id: a.id,
+            userId: a.user_id,
+            arenaId: arenaId,
+            name: a.name,
+            riskLevel: a.risk_level || "balanced",
+            strategyDescription: a.strategy_description || null,
+            cashBalance: entry.cash_balance || 0,
+            status: entry.status || "active",
+            totalArenas: a.total_arenas || 0,
+            totalWins: a.total_wins || 0,
+            bestPnl: a.best_pnl || 0,
+            createdAt: a.created_at,
+          };
+        });
 
         for (const agent of agents) {
           const decayedBalance = applyCashDecay(agent.cashBalance, decayRate);
 
+          // Update cash_balance on arena_entries (not agents table)
           await supabase
-            .from("agents")
+            .from("arena_entries")
             .update({ cash_balance: decayedBalance })
-            .eq("id", agent.id);
+            .eq("arena_id", arenaId)
+            .eq("agent_id", agent.id);
 
           agent.cashBalance = decayedBalance;
           summary.decaysApplied++;

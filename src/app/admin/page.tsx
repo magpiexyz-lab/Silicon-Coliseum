@@ -13,6 +13,7 @@ import {
   Users,
   Clock,
   Shield,
+  Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -89,6 +90,8 @@ export default function AdminPage() {
   const [selectedTokens, setSelectedTokens] = useState<string[]>([]);
   const [poolConfigs, setPoolConfigs] = useState<PoolConfig[]>([]);
   const [arenaSubmitting, setArenaSubmitting] = useState(false);
+  const [evalRunning, setEvalRunning] = useState(false);
+  const [evalResult, setEvalResult] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -187,6 +190,28 @@ export default function AdminPage() {
     }
   }
 
+  async function handleForceEval() {
+    setEvalRunning(true);
+    setEvalResult(null);
+    try {
+      const res = await fetch("/api/cron/evaluate", { method: "POST" });
+      const data = await res.json();
+      if (res.ok) {
+        const s = data.summary;
+        setEvalResult(
+          `Processed ${s.arenasProcessed} arena(s), ${s.agentsEvaluated} agents evaluated, ${s.tradesExecuted} trades executed` +
+          (s.errors?.length ? `. Errors: ${s.errors.join("; ")}` : "")
+        );
+      } else {
+        setEvalResult(`Error: ${data.error || "Unknown error"}`);
+      }
+    } catch {
+      setEvalResult("Failed to run evaluation");
+    } finally {
+      setEvalRunning(false);
+    }
+  }
+
   async function handleCreateArena(e: React.FormEvent) {
     e.preventDefault();
     setArenaSubmitting(true);
@@ -268,11 +293,35 @@ export default function AdminPage() {
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold gradient-text">Admin Panel</h1>
-          <Button variant="ghost" size="sm" onClick={fetchData}>
-            <RefreshCw className="w-4 h-4 mr-1" />
-            Refresh
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="default"
+              size="sm"
+              onClick={handleForceEval}
+              disabled={evalRunning}
+            >
+              {evalRunning ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-1" />
+              ) : (
+                <Zap className="w-4 h-4 mr-1" />
+              )}
+              Force Run Eval
+            </Button>
+            <Button variant="ghost" size="sm" onClick={fetchData}>
+              <RefreshCw className="w-4 h-4 mr-1" />
+              Refresh
+            </Button>
+          </div>
         </div>
+        {evalResult && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 p-4 rounded-lg glass border border-primary/30 text-sm"
+          >
+            {evalResult}
+          </motion.div>
+        )}
         {error && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
