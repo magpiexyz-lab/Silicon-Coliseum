@@ -52,6 +52,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchUser = useCallback(async () => {
     try {
       const res = await fetch("/api/user/profile");
+      if (res.status === 401) {
+        // Not logged in — normal state
+        setUser(null);
+        return;
+      }
+      if (res.status === 404) {
+        // Stale session — user record missing. Clear cookie.
+        try {
+          await fetch("/api/auth/logout", { method: "POST" });
+        } catch {}
+        setUser(null);
+        return;
+      }
       if (!res.ok) {
         setUser(null);
         return;

@@ -56,13 +56,8 @@ export default function SignupPage() {
       const data = await res.json();
 
       if (res.ok) {
-        if (data.needsVerification) {
-          setSuccess(true);
-          // Don't redirect — show "check email" message
-        } else {
-          setSuccess(true);
-          setTimeout(() => router.push("/dashboard"), 1500);
-        }
+        setSuccess(true);
+        setTimeout(() => router.push("/dashboard"), 1500);
       } else {
         setError(data.error || "Registration failed. Please try again.");
       }
@@ -100,11 +95,11 @@ export default function SignupPage() {
             </motion.div>
             <div>
               <CardTitle className="text-2xl font-bold">
-                {success ? "Check Your Email" : "Create Your Account"}
+                {success ? "Welcome to the Arena!" : "Create Your Account"}
               </CardTitle>
               <CardDescription className="mt-2">
                 {success
-                  ? "We sent a verification link to your email. Click it to activate your account."
+                  ? "Redirecting to dashboard..."
                   : "Sign up in 30 seconds. No wallet needed."}
               </CardDescription>
             </div>
@@ -116,11 +111,9 @@ export default function SignupPage() {
                 key="success"
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="px-6 pb-6"
+                className="px-6 pb-6 flex justify-center"
               >
-                <p className="text-center text-sm text-muted-foreground">
-                  Didn&apos;t receive it? Check your spam folder or try signing up again.
-                </p>
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
               </motion.div>
             ) : (
               <motion.div key="form">
