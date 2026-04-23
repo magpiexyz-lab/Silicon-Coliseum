@@ -51,11 +51,11 @@ interface ArenaData {
   name: string;
   description: string | null;
   status: string;
-  starting_balance: number;
-  max_agents: number;
-  decay_rate: number;
-  competition_start: string | null;
-  competition_end: string | null;
+  startingBalance: number;
+  maxAgents: number;
+  decayRate: number;
+  competitionStart: string | null;
+  competitionEnd: string | null;
   agentCount?: number;
 }
 
@@ -652,22 +652,22 @@ export default function AdminPage() {
                             <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
                               <div className="flex items-center gap-1">
                                 <Users className="w-3 h-3" />
-                                {arena.agentCount || 0}/{arena.max_agents} agents
+                                {arena.agentCount || 0}/{arena.maxAgents} agents
                               </div>
                               <div className="flex items-center gap-1">
                                 <Coins className="w-3 h-3" />
-                                ${arena.starting_balance.toLocaleString()} start
+                                ${arena.startingBalance.toLocaleString()} start
                               </div>
-                              {arena.competition_start && (
+                              {arena.competitionStart && (
                                 <div className="flex items-center gap-1 col-span-2">
                                   <Clock className="w-3 h-3" />
                                   {new Date(
-                                    arena.competition_start
+                                    arena.competitionStart
                                   ).toLocaleDateString()}{" "}
                                   -{" "}
-                                  {arena.competition_end
+                                  {arena.competitionEnd
                                     ? new Date(
-                                        arena.competition_end
+                                        arena.competitionEnd
                                       ).toLocaleDateString()
                                     : "TBD"}
                                 </div>
