@@ -106,7 +106,7 @@ export async function evaluateAgent(
     const systemPrompt = `You are an AI trading agent named "${agent.name}" competing in a virtual trading arena. You make trading decisions by swapping tokens via AMM pools. Respond ONLY with valid JSON.`;
 
     const response = await cerebras.chat.completions.create({
-      model: "llama-3.3-70b",
+      model: "llama3.1-8b",
       temperature: 0.7,
       max_tokens: 1500,
       messages: [
@@ -300,7 +300,7 @@ ${poolsText}
 Respond with JSON: { "should_trade": boolean, "reasoning": string, "market_analysis": string, "actions": [{ "pool_id": string, "token_in": string, "token_out": string, "amount_in": number, "reason": string }] }`;
 
     const response = await cerebras.chat.completions.create({
-      model: "llama-3.3-70b",
+      model: "llama3.1-8b",
       temperature: 0.7,
       max_tokens: 1500,
       messages: [
