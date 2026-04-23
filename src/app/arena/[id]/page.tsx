@@ -18,12 +18,15 @@ import {
   Coins,
   Zap,
   AlertCircle,
+  ChevronDown,
+  ChevronUp,
+  Brain,
+  Timer,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -57,12 +60,7 @@ import {
 import RiskLevelBadge from "@/components/risk-level-badge";
 import type { RiskLevel } from "@/lib/types";
 
-const statusColors: Record<string, string> = {
-  upcoming: "bg-blue-500/20 text-blue-400 border-blue-500/30",
-  active: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
-  completed: "bg-muted text-muted-foreground border-border/30",
-  cancelled: "bg-destructive/20 text-destructive border-destructive/30",
-};
+import { statusColors } from "@/lib/status-colors";
 
 interface ArenaDetail {
   id: string;
@@ -97,12 +95,26 @@ interface TokenPrice {
 
 interface TradeEntry {
   id: string;
+  agentId: string;
   agentName: string;
   action: string;
   tokenSymbol: string;
   price: number;
   amountIn: number;
+  amountOut: number;
+  reasoning: string | null;
   createdAt: string;
+}
+
+interface AgentDetail {
+  trades: TradeEntry[];
+  loading: boolean;
+}
+
+interface AvailableAgent {
+  id: string;
+  name: string;
+  riskLevel: RiskLevel;
 }
 
 function useCountdown(targetDate: string | null) {
@@ -135,27 +147,94 @@ function useCountdown(targetDate: string | null) {
   return timeLeft;
 }
 
+function useNextEvalCountdown(competitionStart: string | null, status: string) {
+  const [timeLeft, setTimeLeft] = useState("");
+
+  useEffect(() => {
+    if (!competitionStart || status !== "active") return;
+    const startTime = new Date(competitionStart).getTime();
+    const CYCLE_MS = 30 * 60 * 1000; // 30 minutes
+
+    function update() {
+      const now = Date.now();
+      const elapsed = now - startTime;
+      if (elapsed < 0) {
+        setTimeLeft("Starting soon...");
+        return;
+      }
+      const currentCycleElapsed = elapsed % CYCLE_MS;
+      const remaining = CYCLE_MS - currentCycleElapsed;
+      const m = Math.floor(remaining / 60000);
+      const s = Math.floor((remaining % 60000) / 1000);
+      setTimeLeft(`${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`);
+    }
+
+    update();
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, [competitionStart, status]);
+
+  return timeLeft;
+}
+
+function relativeTime(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  if (diff < 60000) return "just now";
+  if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+  return `${Math.floor(diff / 86400000)}d ago`;
+}
+
 function EnterArenaDialog({ arenaId }: { arenaId: string }) {
-  const [mode, setMode] = useState<"quick" | "custom">("quick");
+  const [mode, setMode] = useState<"existing" | "quick" | "custom">("quick");
   const [name, setName] = useState("");
   const [riskLevel, setRiskLevel] = useState<string>("balanced");
   const [strategy, setStrategy] = useState("");
+  const [selectedAgentId, setSelectedAgentId] = useState("");
+  const [availableAgents, setAvailableAgents] = useState<AvailableAgent[]>([]);
+  const [loadingAgents, setLoadingAgents] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    async function fetchAgents() {
+      setLoadingAgents(true);
+      try {
+        const res = await fetch("/api/user/agents");
+        if (res.ok) {
+          const data = await res.json();
+          const available = (data.agents || []).filter(
+            (a: { currentArena: unknown }) => !a.currentArena
+          );
+          setAvailableAgents(available);
+          if (available.length > 0) setMode("existing");
+        }
+      } catch {
+        // ignore
+      } finally {
+        setLoadingAgents(false);
+      }
+    }
+    fetchAgents();
+  }, []);
 
   async function handleSubmit() {
     setSubmitting(true);
     setError(null);
     try {
-      const body =
-        mode === "quick"
-          ? { quickDeploy: true }
-          : {
-              name,
-              riskLevel,
-              strategyDescription: strategy || undefined,
-            };
+      let body: Record<string, unknown>;
+      if (mode === "existing") {
+        body = { agentId: selectedAgentId };
+      } else if (mode === "quick") {
+        body = { quickDeploy: true };
+      } else {
+        body = {
+          name,
+          riskLevel,
+          strategyDescription: strategy || undefined,
+        };
+      }
 
       const res = await fetch(`/api/arenas/${arenaId}/enter`, {
         method: "POST",
@@ -192,7 +271,18 @@ function EnterArenaDialog({ arenaId }: { arenaId: string }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
+        {availableAgents.length > 0 && (
+          <Button
+            variant={mode === "existing" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setMode("existing")}
+            className="flex-1"
+          >
+            <Swords className="w-3.5 h-3.5 mr-1" />
+            Existing Agent
+          </Button>
+        )}
         <Button
           variant={mode === "quick" ? "default" : "outline"}
           size="sm"
@@ -212,7 +302,45 @@ function EnterArenaDialog({ arenaId }: { arenaId: string }) {
         </Button>
       </div>
 
-      {mode === "quick" ? (
+      {mode === "existing" ? (
+        <div className="space-y-3">
+          {loadingAgents ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="w-4 h-4 animate-spin" />
+            </div>
+          ) : availableAgents.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-2">
+              No available agents. Create one first or use Quick Deploy.
+            </p>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <Label>Select Agent</Label>
+                <Select value={selectedAgentId} onValueChange={setSelectedAgentId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose an agent..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableAgents.map((a) => (
+                      <SelectItem key={a.id} value={a.id}>
+                        {a.name} ({a.riskLevel})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                onClick={handleSubmit}
+                disabled={submitting || !selectedAgentId}
+                className="w-full"
+              >
+                {submitting && <Loader2 className="w-4 h-4 animate-spin mr-1" />}
+                Deploy Agent
+              </Button>
+            </>
+          )}
+        </div>
+      ) : mode === "quick" ? (
         <div className="text-center space-y-3 py-2">
           <p className="text-sm text-muted-foreground">
             One-click deploy with a balanced strategy agent. Auto-generated name
@@ -404,6 +532,9 @@ export default function ArenaDetailPage() {
   const [trades, setTrades] = useState<TradeEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
+  const [agentDetails, setAgentDetails] = useState<Record<string, AgentDetail>>({});
+  const [expandedReasoning, setExpandedReasoning] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     if (!arenaId) return;
@@ -502,6 +633,30 @@ export default function ArenaDetailPage() {
   }, [arenaId, arena]);
 
   const timeLeft = useCountdown(arena?.competitionEnd ?? null);
+  const nextEval = useNextEvalCountdown(arena?.competitionStart ?? null, arena?.status ?? "");
+
+  const fetchAgentDetail = useCallback(async (agentId: string) => {
+    if (agentDetails[agentId]?.trades.length > 0) return; // already loaded
+    setAgentDetails(prev => ({
+      ...prev,
+      [agentId]: { trades: [], loading: true },
+    }));
+    try {
+      const res = await fetch(`/api/arenas/${arenaId}/trades?agentId=${agentId}&limit=5`);
+      if (res.ok) {
+        const data = await res.json();
+        setAgentDetails(prev => ({
+          ...prev,
+          [agentId]: { trades: data.trades || [], loading: false },
+        }));
+      }
+    } catch {
+      setAgentDetails(prev => ({
+        ...prev,
+        [agentId]: { ...prev[agentId], loading: false },
+      }));
+    }
+  }, [arenaId, agentDetails]);
 
   if (loading) {
     return (
@@ -536,9 +691,9 @@ export default function ArenaDetailPage() {
     <div className="min-h-screen">
       <div className="mesh-gradient fixed inset-0 -z-10" />
 
-      {/* Header */}
-      <header className="glass border-b border-border/30 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
+        {/* Arena header bar */}
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <Link
               href="/arenas"
@@ -546,12 +701,18 @@ export default function ArenaDetailPage() {
             >
               <ArrowLeft className="w-4 h-4" />
             </Link>
-            <h1 className="text-lg font-bold gradient-text">{arena.name}</h1>
+            <h1 className="text-2xl font-bold">{arena.name}</h1>
             <Badge className={statusColors[arena.status] || ""}>
               {arena.status}
             </Badge>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {arena.status === "active" && nextEval && (
+              <Badge variant="outline" className="font-mono gap-1 border-primary/30 text-primary">
+                <Timer className="w-3 h-3" />
+                Next eval: {nextEval}
+              </Badge>
+            )}
             {arena.status === "active" && timeLeft && (
               <span className="text-sm font-mono text-primary flex items-center gap-1">
                 <Clock className="w-3.5 h-3.5" />
@@ -598,9 +759,6 @@ export default function ArenaDetailPage() {
             )}
           </div>
         </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-4 py-8 space-y-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Leaderboard */}
           <motion.div
@@ -644,47 +802,124 @@ export default function ArenaDetailPage() {
                           <TableHead className="text-right hidden sm:table-cell">
                             Trades
                           </TableHead>
+                          <TableHead className="w-10" />
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {leaderboard.map((entry) => (
-                          <TableRow key={entry.agentId}>
-                            <TableCell>
-                              <span className="font-bold">
-                                {entry.rank === 1
-                                  ? "1st"
-                                  : entry.rank === 2
-                                    ? "2nd"
-                                    : entry.rank === 3
-                                      ? "3rd"
-                                      : `#${entry.rank}`}
-                              </span>
-                            </TableCell>
-                            <TableCell className="font-medium">
-                              {entry.agentName}
-                            </TableCell>
-                            <TableCell className="text-muted-foreground hidden sm:table-cell">
-                              {entry.ownerUsername}
-                            </TableCell>
-                            <TableCell className="hidden sm:table-cell">
-                              <RiskLevelBadge level={entry.riskLevel} />
-                            </TableCell>
-                            <TableCell className="text-right font-mono">
-                              ${entry.totalValue.toLocaleString()}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <span
-                                className={`font-bold ${entry.pnlPercent >= 0 ? "text-emerald-400" : "text-red-400"}`}
+                        {leaderboard.map((entry) => {
+                          const isExpanded = expandedAgent === entry.agentId;
+                          const detail = agentDetails[entry.agentId];
+                          return (
+                            <>
+                              <TableRow
+                                key={entry.agentId}
+                                className="cursor-pointer hover:bg-muted/30 transition-colors"
+                                onClick={() => {
+                                  if (isExpanded) {
+                                    setExpandedAgent(null);
+                                  } else {
+                                    setExpandedAgent(entry.agentId);
+                                    fetchAgentDetail(entry.agentId);
+                                  }
+                                }}
                               >
-                                {entry.pnlPercent >= 0 ? "+" : ""}
-                                {entry.pnlPercent.toFixed(1)}%
-                              </span>
-                            </TableCell>
-                            <TableCell className="text-right text-muted-foreground hidden sm:table-cell">
-                              {entry.tradeCount}
-                            </TableCell>
-                          </TableRow>
-                        ))}
+                                <TableCell>
+                                  <span className="font-bold">
+                                    {entry.rank === 1
+                                      ? "1st"
+                                      : entry.rank === 2
+                                        ? "2nd"
+                                        : entry.rank === 3
+                                          ? "3rd"
+                                          : `#${entry.rank}`}
+                                  </span>
+                                </TableCell>
+                                <TableCell className="font-medium">
+                                  {entry.agentName}
+                                </TableCell>
+                                <TableCell className="text-muted-foreground hidden sm:table-cell">
+                                  {entry.ownerUsername}
+                                </TableCell>
+                                <TableCell className="hidden sm:table-cell">
+                                  <RiskLevelBadge level={entry.riskLevel} />
+                                </TableCell>
+                                <TableCell className="text-right font-mono">
+                                  ${entry.totalValue.toLocaleString()}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <span
+                                    className={`font-bold ${entry.pnlPercent >= 0 ? "text-primary" : "text-destructive"}`}
+                                  >
+                                    {entry.pnlPercent >= 0 ? "+" : ""}
+                                    {entry.pnlPercent.toFixed(1)}%
+                                  </span>
+                                </TableCell>
+                                <TableCell className="text-right text-muted-foreground hidden sm:table-cell">
+                                  {entry.tradeCount}
+                                </TableCell>
+                                <TableCell>
+                                  {isExpanded ? (
+                                    <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                                  ) : (
+                                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                              {isExpanded && (
+                                <TableRow key={`${entry.agentId}-detail`}>
+                                  <TableCell colSpan={8} className="p-0">
+                                    <div className="px-4 py-3 bg-muted/10 border-t border-border/20">
+                                      <p className="text-xs font-medium text-muted-foreground uppercase mb-2 flex items-center gap-1">
+                                        <Brain className="w-3 h-3" />
+                                        Recent AI Decisions
+                                      </p>
+                                      {detail?.loading ? (
+                                        <div className="flex items-center gap-2 py-3">
+                                          <Loader2 className="w-4 h-4 animate-spin" />
+                                          <span className="text-sm text-muted-foreground">Loading...</span>
+                                        </div>
+                                      ) : !detail?.trades.length ? (
+                                        <p className="text-sm text-muted-foreground py-2">No trades yet</p>
+                                      ) : (
+                                        <div className="space-y-2">
+                                          {detail.trades.map((t) => (
+                                            <div key={t.id} className="glass rounded-lg p-2.5 text-sm">
+                                              <div className="flex items-center justify-between gap-2">
+                                                <div className="flex items-center gap-2">
+                                                  <Badge
+                                                    className={`text-[10px] px-1.5 py-0 ${
+                                                      t.action === "BUY"
+                                                        ? "bg-primary/20 text-primary border-primary/30"
+                                                        : "bg-destructive/20 text-destructive border-destructive/30"
+                                                    }`}
+                                                  >
+                                                    {t.action}
+                                                  </Badge>
+                                                  <span className="font-mono">{t.tokenSymbol}</span>
+                                                  <span className="text-muted-foreground">
+                                                    @ ${t.price.toFixed(4)}
+                                                  </span>
+                                                </div>
+                                                <span className="text-xs text-muted-foreground">
+                                                  {relativeTime(t.createdAt)}
+                                                </span>
+                                              </div>
+                                              {t.reasoning && (
+                                                <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+                                                  {t.reasoning}
+                                                </p>
+                                              )}
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              )}
+                            </>
+                          );
+                        })}
                       </TableBody>
                     </Table>
                   </div>
@@ -734,7 +969,7 @@ export default function ArenaDetailPage() {
                             ${token.currentPrice.toFixed(4)}
                           </p>
                           <p
-                            className={`text-xs font-medium flex items-center gap-0.5 justify-end ${token.priceChange >= 0 ? "text-emerald-400" : "text-red-400"}`}
+                            className={`text-xs font-medium flex items-center gap-0.5 justify-end ${token.priceChange >= 0 ? "text-gain" : "text-loss"}`}
                           >
                             {token.priceChange >= 0 ? (
                               <TrendingUp className="w-3 h-3" />
@@ -783,31 +1018,55 @@ export default function ArenaDetailPage() {
                   No trades yet.
                 </p>
               ) : (
-                <div className="space-y-2 max-h-80 overflow-y-auto">
+                <div className="space-y-2 max-h-96 overflow-y-auto">
                   {trades.map((trade) => (
                     <div
                       key={trade.id}
-                      className="flex items-center justify-between py-2 px-3 rounded-lg glass text-sm"
+                      className="rounded-lg glass text-sm"
                     >
-                      <div className="flex items-center gap-3">
-                        <Badge
-                          className={
-                            trade.action === "BUY"
-                              ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
-                              : "bg-red-500/20 text-red-400 border-red-500/30"
-                          }
-                        >
-                          {trade.action}
-                        </Badge>
-                        <span className="font-medium">{trade.agentName}</span>
-                        <Separator orientation="vertical" className="h-4" />
-                        <span className="text-muted-foreground">
-                          {trade.tokenSymbol} at ${trade.price.toFixed(4)}
-                        </span>
+                      <div
+                        className="flex items-center justify-between py-2 px-3 cursor-pointer"
+                        onClick={() =>
+                          setExpandedReasoning(
+                            expandedReasoning === trade.id ? null : trade.id
+                          )
+                        }
+                      >
+                        <div className="flex items-center gap-3">
+                          <Badge
+                            className={
+                              trade.action === "BUY"
+                                ? "bg-primary/20 text-primary border-primary/30"
+                                : "bg-destructive/20 text-destructive border-destructive/30"
+                            }
+                          >
+                            {trade.action}
+                          </Badge>
+                          <span className="font-medium">{trade.agentName}</span>
+                          <Separator orientation="vertical" className="h-4" />
+                          <span className="font-mono text-muted-foreground">
+                            {trade.tokenSymbol}
+                          </span>
+                          <span className="text-muted-foreground">
+                            @ ${trade.price.toFixed(4)}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground">
+                            {relativeTime(trade.createdAt)}
+                          </span>
+                          {trade.reasoning && (
+                            <Brain className="w-3 h-3 text-muted-foreground" />
+                          )}
+                        </div>
                       </div>
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(trade.createdAt).toLocaleTimeString()}
-                      </span>
+                      {expandedReasoning === trade.id && trade.reasoning && (
+                        <div className="px-3 pb-2 border-t border-border/20">
+                          <p className="text-xs text-muted-foreground pt-2 leading-relaxed">
+                            {trade.reasoning}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -815,7 +1074,7 @@ export default function ArenaDetailPage() {
             </CardContent>
           </Card>
         </motion.div>
-      </main>
+      </div>
     </div>
   );
 }

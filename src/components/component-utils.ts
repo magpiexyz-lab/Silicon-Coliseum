@@ -73,13 +73,13 @@ export function truncateAddress(address: string): string {
 export function getRiskLevelStyles(level: RiskLevel): string {
   switch (level) {
     case "conservative":
-      return "bg-blue-500/20 text-blue-400 border-blue-500/30";
+      return "bg-primary/20 text-primary border-primary/30";
     case "balanced":
-      return "bg-emerald-500/20 text-emerald-400 border-emerald-500/30";
+      return "bg-primary/20 text-primary border-primary/30";
     case "aggressive":
-      return "bg-amber-500/20 text-amber-400 border-amber-500/30";
+      return "bg-secondary/20 text-secondary border-secondary/30";
     case "degen":
-      return "bg-red-500/20 text-red-400 border-red-500/30";
+      return "bg-destructive/20 text-destructive border-destructive/30";
   }
 }
 

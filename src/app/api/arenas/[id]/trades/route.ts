@@ -29,12 +29,20 @@ export async function GET(
 
     const supabase = createServiceClient();
 
-    const { data: trades, error } = await supabase
+    const agentFilter = searchParams.get("agentId");
+
+    let query = supabase
       .from("arena_trades")
-      .select("*, agents(name)")
+      .select("*, agents(name), platform_tokens(symbol)")
       .eq("arena_id", arenaId)
       .order("created_at", { ascending: false })
       .limit(limitParam);
+
+    if (agentFilter) {
+      query = query.eq("agent_id", agentFilter);
+    }
+
+    const { data: trades, error } = await query;
 
     if (error) {
       console.error("Failed to fetch trades:", error);
@@ -52,6 +60,7 @@ export async function GET(
       agentName: (t.agents as unknown as { name: string } | null)?.name || "Unknown",
       action: t.action,
       tokenId: t.token_id,
+      tokenSymbol: (t.platform_tokens as unknown as { symbol: string } | null)?.symbol || "???",
       amountIn: t.amount_in,
       amountOut: t.amount_out,
       price: t.price,

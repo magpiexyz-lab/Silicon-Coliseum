@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
+import { AuthProvider } from "@/components/auth-provider";
+import { Navbar } from "@/components/navbar";
 import "./globals.css";
 
 const inter = Inter({
@@ -38,13 +40,17 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <script
+          // Safe: hardcoded string constant, no user input
           dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }}
         />
       </head>
       <body
         className={`${inter.variable} ${jetbrainsMono.variable} font-sans min-h-screen`}
       >
-        {children}
+        <AuthProvider>
+          <Navbar />
+          <main className="pt-14">{children}</main>
+        </AuthProvider>
         <div className="grain" aria-hidden="true" />
       </body>
     </html>

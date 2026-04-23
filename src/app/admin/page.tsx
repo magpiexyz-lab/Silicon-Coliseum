@@ -8,7 +8,6 @@ import {
   Swords,
   Plus,
   Loader2,
-  ArrowLeft,
   RefreshCw,
   AlertCircle,
   Users,
@@ -37,12 +36,7 @@ const fadeUp = {
   },
 };
 
-const statusColors: Record<string, string> = {
-  upcoming: "bg-blue-500/20 text-blue-400 border-blue-500/30",
-  active: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
-  completed: "bg-muted text-muted-foreground border-border/30",
-  cancelled: "bg-destructive/20 text-destructive border-destructive/30",
-};
+import { statusColors } from "@/lib/status-colors";
 
 interface TokenData {
   id: string;
@@ -271,26 +265,14 @@ export default function AdminPage() {
     <div className="min-h-screen">
       <div className="mesh-gradient fixed inset-0 -z-10" />
 
-      {/* Header */}
-      <header className="glass border-b border-border/30 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link
-              href="/arenas"
-              className="text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </Link>
-            <h1 className="text-lg font-bold gradient-text">Admin Panel</h1>
-          </div>
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold gradient-text">Admin Panel</h1>
           <Button variant="ghost" size="sm" onClick={fetchData}>
             <RefreshCw className="w-4 h-4 mr-1" />
             Refresh
           </Button>
         </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-4 py-8">
         {error && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
@@ -706,7 +688,18 @@ export default function AdminPage() {
             )}
           </TabsContent>
         </Tabs>
-      </main>
+
+        {/* Admin note */}
+        <div className="mt-8 p-4 rounded-lg glass border-border/30 text-sm text-muted-foreground">
+          <p className="font-medium text-foreground mb-1">How admins are designated</p>
+          <p>
+            Admin privileges are set in the database by setting{" "}
+            <code className="text-primary font-mono text-xs">is_admin = true</code>{" "}
+            on the user record in the <code className="text-primary font-mono text-xs">users</code> table.
+            Only admins can create tokens and arenas.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

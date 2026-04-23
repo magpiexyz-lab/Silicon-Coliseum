@@ -100,7 +100,8 @@ export async function getArenaDetail(
 
 /**
  * Enter an arena with an agent.
- * Validates: arena is upcoming/active, spots available, user doesn't already have agent.
+ * If agentId is provided, reuse an existing persistent agent.
+ * Otherwise, create a new agent.
  */
 export async function enterArena(
   supabase: SupabaseClient,
@@ -110,6 +111,7 @@ export async function enterArena(
     name: string;
     riskLevel: string;
     strategyDescription?: string;
+    agentId?: string;
   }
 ): Promise<Agent> {
   // Fetch arena
@@ -128,44 +130,98 @@ export async function enterArena(
     throw new Error("Arena is not accepting new agents");
   }
 
-  // Check agent count
+  // Check agent count via arena_entries
+  const { count: entryCount } = await supabase
+    .from("arena_entries")
+    .select("*", { count: "exact", head: true })
+    .eq("arena_id", arenaId);
+
+  // Fallback: also check agents table for backward compat
   const { count: agentCount } = await supabase
     .from("agents")
     .select("*", { count: "exact", head: true })
     .eq("arena_id", arenaId);
 
-  if ((agentCount || 0) >= arena.maxAgents) {
+  const totalCount = Math.max(entryCount || 0, agentCount || 0);
+  if (totalCount >= arena.maxAgents) {
     throw new Error("Arena is full");
   }
 
-  // Check user doesn't already have an agent in this arena
-  const { data: existingAgent } = await supabase
-    .from("agents")
-    .select("id")
-    .eq("arena_id", arenaId)
-    .eq("user_id", userId)
-    .maybeSingle();
+  let agent;
 
-  if (existingAgent) {
-    throw new Error("You already have an agent in this arena");
+  if (agentConfig.agentId) {
+    // Reuse existing agent
+    const { data: existingAgent, error: agentError } = await supabase
+      .from("agents")
+      .select("*")
+      .eq("id", agentConfig.agentId)
+      .eq("user_id", userId)
+      .single();
+
+    if (agentError || !existingAgent) throw new Error("Agent not found");
+
+    // Check agent isn't already in an active arena
+    const { data: activeEntry } = await supabase
+      .from("arena_entries")
+      .select("id")
+      .eq("agent_id", agentConfig.agentId)
+      .eq("status", "active")
+      .maybeSingle();
+
+    if (activeEntry) {
+      throw new Error("This agent is already in an active arena");
+    }
+
+    // Update agent to point to this arena and reset cash
+    await supabase
+      .from("agents")
+      .update({
+        arena_id: arenaId,
+        cash_balance: arena.startingBalance,
+        status: "active",
+      })
+      .eq("id", agentConfig.agentId);
+
+    agent = { ...existingAgent, arena_id: arenaId, cash_balance: arena.startingBalance, status: "active" };
+  } else {
+    // Check user doesn't already have an agent with same name
+    const { data: existingAgent } = await supabase
+      .from("arena_entries")
+      .select("agent_id, agents!inner(user_id)")
+      .eq("arena_id", arenaId)
+      .eq("agents.user_id", userId)
+      .maybeSingle();
+
+    if (existingAgent) {
+      throw new Error("You already have an agent in this arena");
+    }
+
+    // Create new agent
+    const { data: agentRow, error: agentError } = await supabase
+      .from("agents")
+      .insert({
+        user_id: userId,
+        arena_id: arenaId,
+        name: agentConfig.name,
+        risk_level: agentConfig.riskLevel,
+        strategy_description: agentConfig.strategyDescription || null,
+        cash_balance: arena.startingBalance,
+        status: "active",
+      })
+      .select()
+      .single();
+
+    if (agentError) throw new Error(`Failed to create agent: ${agentError.message}`);
+    agent = agentRow;
   }
 
-  // Create agent
-  const { data: agentRow, error: agentError } = await supabase
-    .from("agents")
-    .insert({
-      user_id: userId,
-      arena_id: arenaId,
-      name: agentConfig.name,
-      risk_level: agentConfig.riskLevel,
-      strategy_description: agentConfig.strategyDescription || null,
-      cash_balance: arena.startingBalance,
-      status: "active",
-    })
-    .select()
-    .single();
-
-  if (agentError) throw new Error(`Failed to create agent: ${agentError.message}`);
+  // Create arena_entries record
+  await supabase.from("arena_entries").insert({
+    arena_id: arenaId,
+    agent_id: agent.id,
+    cash_balance: arena.startingBalance,
+    status: "active",
+  });
 
   // Award participation CP
   try {
@@ -174,7 +230,7 @@ export async function enterArena(
     // Non-fatal
   }
 
-  return mapAgentRow(agentRow);
+  return mapAgentRow(agent);
 }
 
 // ============================================================================
@@ -377,6 +433,40 @@ export async function finalizeArena(
     // Non-fatal
   }
 
+  // Update arena_entries status to finished
+  await supabase
+    .from("arena_entries")
+    .update({ status: "finished" })
+    .eq("arena_id", arenaId);
+
+  // Update agent stats (total_arenas, total_wins, best_pnl)
+  for (const entry of leaderboard) {
+    const { data: agentRow } = await supabase
+      .from("agents")
+      .select("total_arenas, total_wins, best_pnl")
+      .eq("id", entry.agentId)
+      .single();
+
+    if (agentRow) {
+      await supabase
+        .from("agents")
+        .update({
+          total_arenas: (agentRow.total_arenas || 0) + 1,
+          total_wins: entry.rank === 1 ? (agentRow.total_wins || 0) + 1 : (agentRow.total_wins || 0),
+          best_pnl: Math.max(agentRow.best_pnl || 0, entry.pnlPercent),
+          status: "finished",
+        })
+        .eq("id", entry.agentId);
+    }
+
+    // Update arena_entries with final cash balance
+    await supabase
+      .from("arena_entries")
+      .update({ cash_balance: entry.cashBalance, status: "finished" })
+      .eq("arena_id", arenaId)
+      .eq("agent_id", entry.agentId);
+  }
+
   // Mark arena as completed
   await supabase
     .from("arenas")
@@ -462,12 +552,15 @@ function mapAgentRow(row: Record<string, unknown>): Agent {
   return {
     id: row.id as string,
     userId: row.user_id as string,
-    arenaId: row.arena_id as string,
+    arenaId: (row.arena_id as string) || null,
     name: row.name as string,
     riskLevel: (row.risk_level as Agent["riskLevel"]) || "balanced",
     strategyDescription: (row.strategy_description as string) || null,
     cashBalance: (row.cash_balance as number) || 0,
     status: (row.status as Agent["status"]) || "active",
+    totalArenas: (row.total_arenas as number) || 0,
+    totalWins: (row.total_wins as number) || 0,
+    bestPnl: (row.best_pnl as number) || 0,
     createdAt: row.created_at as string,
   };
 }

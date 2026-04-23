@@ -102,6 +102,9 @@ export async function POST(request: NextRequest) {
           strategyDescription: a.strategy_description || null,
           cashBalance: a.cash_balance || 0,
           status: a.status || "active",
+          totalArenas: a.total_arenas || 0,
+          totalWins: a.total_wins || 0,
+          bestPnl: a.best_pnl || 0,
           createdAt: a.created_at,
         }));
 

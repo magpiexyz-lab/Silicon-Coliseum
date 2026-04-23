@@ -45,6 +45,72 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const include = request.nextUrl.searchParams.get("include");
+    if (include === "prices" && tokens) {
+      // Fetch pool prices for active arenas
+      const { data: activeArenas } = await supabase
+        .from("arenas")
+        .select("id, name")
+        .eq("status", "active");
+
+      const enriched = await Promise.all(
+        (tokens || []).map(async (token) => {
+          const prices: Array<{ arenaName: string; price: number; priceChange: number }> = [];
+          const recentTrades: Array<{ action: string; agentName: string; amount: number; price: number; createdAt: string }> = [];
+
+          if (activeArenas && !token.is_base_currency) {
+            for (const arena of activeArenas) {
+              const { data: pool } = await supabase
+                .from("pools")
+                .select("reserve_token, reserve_base")
+                .eq("arena_id", arena.id)
+                .eq("token_id", token.id)
+                .maybeSingle();
+
+              if (pool && pool.reserve_token > 0) {
+                const price = pool.reserve_base / pool.reserve_token;
+                prices.push({
+                  arenaName: arena.name,
+                  price,
+                  priceChange: 0,
+                });
+              }
+            }
+          }
+
+          // Fetch recent trades for this token
+          const { data: trades } = await supabase
+            .from("arena_trades")
+            .select("action, price, created_at, agent_id, agents(name)")
+            .eq("token_id", token.id)
+            .order("created_at", { ascending: false })
+            .limit(5);
+
+          if (trades) {
+            for (const t of trades) {
+              const agentData = t.agents as unknown as { name: string } | null;
+              recentTrades.push({
+                action: t.action,
+                agentName: agentData?.name || "Unknown",
+                amount: 0,
+                price: t.price,
+                createdAt: t.created_at,
+              });
+            }
+          }
+
+          return {
+            ...token,
+            isBaseCurrency: token.is_base_currency,
+            prices,
+            recentTrades,
+          };
+        })
+      );
+
+      return NextResponse.json({ tokens: enriched });
+    }
+
     return NextResponse.json({ tokens: tokens || [] });
   } catch {
     return NextResponse.json(

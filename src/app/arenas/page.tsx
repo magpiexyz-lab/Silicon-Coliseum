@@ -9,7 +9,6 @@ import {
   Trophy,
   Clock,
   Loader2,
-  ArrowLeft,
   ArrowRight,
   Eye,
   TrendingUp,
@@ -26,7 +25,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import ThemeToggle from "@/components/theme-toggle";
 
 const stagger = {
   hidden: {},
@@ -122,9 +120,9 @@ function ArenaCard({
               <Badge
                 className={
                   variant === "active"
-                    ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
+                    ? "bg-primary/20 text-primary border-primary/30"
                     : variant === "upcoming"
-                      ? "bg-blue-500/20 text-blue-400 border-blue-500/30"
+                      ? "bg-primary/20 text-primary border-primary/30"
                       : "bg-muted text-muted-foreground border-border/30"
                 }
               >
@@ -192,7 +190,7 @@ function ArenaCard({
                 <>
                   {arena.winnerName && (
                     <div className="flex items-center gap-1.5 text-muted-foreground">
-                      <Trophy className="w-3.5 h-3.5 text-yellow-400" />
+                      <Trophy className="w-3.5 h-3.5 text-rank-gold" />
                       <span className="text-foreground font-medium truncate">
                         {arena.winnerName}
                       </span>
@@ -200,8 +198,8 @@ function ArenaCard({
                   )}
                   {arena.topPnl !== undefined && (
                     <div className="flex items-center gap-1.5 text-muted-foreground">
-                      <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
-                      <span className="text-emerald-400 font-bold">
+                      <TrendingUp className="w-3.5 h-3.5 text-gain" />
+                      <span className="text-gain font-bold">
                         +{arena.topPnl.toFixed(1)}%
                       </span>
                     </div>
@@ -307,30 +305,7 @@ export default function ArenasPage() {
     <div className="min-h-screen">
       <div className="mesh-gradient fixed inset-0 -z-10" />
 
-      {/* Header */}
-      <header className="glass border-b border-border/30 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link
-              href="/"
-              className="text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </Link>
-            <h1 className="text-lg font-bold gradient-text">Arenas</h1>
-          </div>
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-            <Link href="/dashboard">
-              <Button size="sm" variant="outline">
-                Dashboard
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Hero */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -434,7 +409,7 @@ export default function ArenasPage() {
             )}
           </TabsContent>
         </Tabs>
-      </main>
+      </div>
     </div>
   );
 }

@@ -6,7 +6,6 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import {
   Loader2,
-  ArrowLeft,
   Trophy,
   Swords,
   TrendingUp,
@@ -25,7 +24,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import ThemeToggle from "@/components/theme-toggle";
+import { Skeleton } from "@/components/ui/skeleton";
 import PnlDisplay from "@/components/pnl-display";
 
 interface UserProfile {
@@ -121,11 +120,29 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="mesh-gradient absolute inset-0" />
-        <div className="z-10 flex flex-col items-center gap-4">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">Loading dashboard...</p>
+      <div className="min-h-screen">
+        <div className="mesh-gradient fixed inset-0 -z-10" />
+        <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
+          <Skeleton className="h-8 w-48" />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <Card className="glass border-border/30 lg:col-span-1">
+              <CardContent className="p-6 space-y-4">
+                <Skeleton className="h-6 w-32" />
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-20 w-full" />
+              </CardContent>
+            </Card>
+            <Card className="glass border-border/30 lg:col-span-2">
+              <CardContent className="p-6 space-y-4">
+                <Skeleton className="h-6 w-40" />
+                <div className="grid grid-cols-4 gap-4">
+                  {[1, 2, 3, 4].map((i) => (
+                    <Skeleton key={i} className="h-24 w-full" />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     );
@@ -135,32 +152,26 @@ export default function DashboardPage() {
     <div className="min-h-screen">
       <div className="mesh-gradient fixed inset-0 -z-10" />
 
-      {/* Header */}
-      <header className="glass border-b border-border/30 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link
-              href="/arenas"
-              className="text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </Link>
-            <h1 className="text-lg font-bold gradient-text">Dashboard</h1>
-          </div>
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-            <Link href="/arenas">
-              <Button size="sm">Browse Arenas</Button>
-            </Link>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-4 py-8 space-y-8">
+      <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
         {error && (
-          <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-sm text-center">
-            {error}
-          </div>
+          <Card className="glass border-destructive/30">
+            <CardContent className="p-6 text-center space-y-3">
+              <p className="text-destructive">{error}</p>
+              <p className="text-sm text-muted-foreground">
+                Your session may have expired. Try logging out and back in.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  await fetch("/api/auth/logout", { method: "POST" });
+                  window.location.href = "/login";
+                }}
+              >
+                Log Out
+              </Button>
+            </CardContent>
+          </Card>
         )}
 
         {/* Profile Stats */}
@@ -201,7 +212,7 @@ export default function DashboardPage() {
                     </p>
                   </div>
                   <div className="glass rounded-lg p-4 text-center">
-                    <Trophy className="w-5 h-5 text-yellow-400 mx-auto mb-1" />
+                    <Trophy className="w-5 h-5 text-rank-gold mx-auto mb-1" />
                     <p className="text-2xl font-bold">{profile.wins}</p>
                     <p className="text-xs text-muted-foreground">Wins</p>
                   </div>
@@ -215,7 +226,7 @@ export default function DashboardPage() {
                     </p>
                   </div>
                   <div className="glass rounded-lg p-4 text-center">
-                    <TrendingUp className="w-5 h-5 text-emerald-400 mx-auto mb-1" />
+                    <TrendingUp className="w-5 h-5 text-gain mx-auto mb-1" />
                     <p className="text-2xl font-bold">
                       <PnlDisplay
                         value={profile.bestPnl}
@@ -352,7 +363,7 @@ export default function DashboardPage() {
             </div>
           )}
         </motion.div>
-      </main>
+      </div>
     </div>
   );
 }

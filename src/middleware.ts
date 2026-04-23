@@ -4,8 +4,12 @@ import { getSessionFromRequest } from "@/lib/auth";
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Protected routes: require auth
-  if (pathname.startsWith("/dashboard") || pathname.startsWith("/admin") || pathname.startsWith("/arenas")) {
+  // Protected routes: require auth (only user-specific pages)
+  if (
+    pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/agents")
+  ) {
     const session = await getSessionFromRequest(request);
     if (!session) {
       const loginUrl = new URL("/login", request.url);
@@ -14,12 +18,12 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Login and signup: redirect to arenas if already authenticated
+  // Login and signup: redirect to dashboard if already authenticated
   if (pathname === "/login" || pathname === "/signup") {
     const session = await getSessionFromRequest(request);
     if (session) {
-      const arenasUrl = new URL("/arenas", request.url);
-      return NextResponse.redirect(arenasUrl);
+      const dashboardUrl = new URL("/dashboard", request.url);
+      return NextResponse.redirect(dashboardUrl);
     }
     return NextResponse.next();
   }
@@ -31,7 +35,7 @@ export const config = {
   matcher: [
     "/dashboard/:path*",
     "/admin/:path*",
-    "/arenas/:path*",
+    "/agents/:path*",
     "/login",
     "/signup",
   ],

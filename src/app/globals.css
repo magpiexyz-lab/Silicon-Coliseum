@@ -79,6 +79,39 @@
   }
 }
 
+/* ── Semantic gain/loss colors ── */
+.text-gain {
+  color: oklch(0.72 0.19 165); /* primary green in dark */
+}
+.text-loss {
+  color: oklch(0.65 0.2 25); /* destructive red in dark */
+}
+.light .text-gain {
+  color: oklch(0.45 0.19 165);
+}
+.light .text-loss {
+  color: oklch(0.5 0.22 25);
+}
+
+.text-rank-gold {
+  color: oklch(0.78 0.16 75);
+}
+.text-rank-silver {
+  color: oklch(0.65 0.015 260);
+}
+.text-rank-bronze {
+  color: oklch(0.6 0.1 55);
+}
+.light .text-rank-gold {
+  color: oklch(0.55 0.16 75);
+}
+.light .text-rank-silver {
+  color: oklch(0.45 0.015 260);
+}
+.light .text-rank-bronze {
+  color: oklch(0.45 0.1 55);
+}
+
 /* ── Glassmorphism ── */
 .glass {
   background: oklch(0.205 0.015 260 / 0.6);

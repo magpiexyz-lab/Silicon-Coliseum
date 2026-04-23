@@ -36,9 +36,9 @@ export default function PnlDisplay({
   const isZero = value === 0;
 
   const colorClass = isPositive
-    ? "text-emerald-400"
+    ? "text-gain"
     : isNegative
-      ? "text-red-400"
+      ? "text-loss"
       : "text-muted-foreground";
 
   const formatted = formatPnlValue(value, percentage);

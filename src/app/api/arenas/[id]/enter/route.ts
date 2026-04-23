@@ -11,6 +11,8 @@ const EnterArenaSchema = z.object({
     .enum(["conservative", "balanced", "aggressive", "degen"])
     .default("balanced"),
   strategyDescription: z.string().max(500).optional(),
+  agentId: z.string().uuid().optional(),
+  quickDeploy: z.boolean().optional(),
 });
 
 export async function POST(
@@ -58,7 +60,7 @@ export async function POST(
       );
     }
 
-    const { riskLevel, strategyDescription } = parsed.data;
+    const { riskLevel, strategyDescription, agentId } = parsed.data;
 
     // Look up user in users table to get internal ID
     const supabase = createServiceClient();
@@ -92,6 +94,7 @@ export async function POST(
       name: agentName,
       riskLevel,
       strategyDescription,
+      agentId,
     });
 
     return NextResponse.json({ agent }, { status: 201 });
@@ -103,7 +106,8 @@ export async function POST(
       message.includes("not found") ||
       message.includes("not accepting") ||
       message.includes("full") ||
-      message.includes("already have")
+      message.includes("already have") ||
+      message.includes("already in")
     ) {
       return NextResponse.json({ error: message }, { status: 400 });
     }

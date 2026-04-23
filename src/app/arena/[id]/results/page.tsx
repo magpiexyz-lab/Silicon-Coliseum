@@ -138,27 +138,19 @@ export default function ArenaResultsPage() {
     <div className="min-h-screen">
       <div className="mesh-gradient fixed inset-0 -z-10" />
 
-      {/* Header */}
-      <header className="glass border-b border-border/30 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link
-              href={`/arena/${arenaId}`}
-              className="text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </Link>
-            <h1 className="text-lg font-bold gradient-text">
-              {arenaName} Results
-            </h1>
-            <Badge className="bg-muted text-muted-foreground border-border/30">
-              Completed
-            </Badge>
-          </div>
+      <div className="max-w-5xl mx-auto px-4 py-8 space-y-8">
+        <div className="flex items-center gap-3">
+          <Link
+            href={`/arena/${arenaId}`}
+            className="text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </Link>
+          <h1 className="text-2xl font-bold">{arenaName} Results</h1>
+          <Badge className="bg-muted text-muted-foreground border-border/30">
+            Completed
+          </Badge>
         </div>
-      </header>
-
-      <main className="max-w-5xl mx-auto px-4 py-8 space-y-8">
         {error && (
           <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-sm text-center">
             {error}
@@ -174,8 +166,8 @@ export default function ArenaResultsPage() {
           >
             <Card className="glass border-primary/30 glass-glow overflow-hidden">
               <CardContent className="p-8 text-center space-y-4">
-                <div className="w-20 h-20 rounded-full bg-yellow-500/20 flex items-center justify-center mx-auto">
-                  <Trophy className="w-10 h-10 text-yellow-400" />
+                <div className="w-20 h-20 rounded-full bg-secondary/20 flex items-center justify-center mx-auto">
+                  <Trophy className="w-10 h-10 text-rank-gold" />
                 </div>
                 <div>
                   <h2 className="text-2xl font-bold">{winner.agentName}</h2>
@@ -185,7 +177,7 @@ export default function ArenaResultsPage() {
                 </div>
                 <div className="flex items-center justify-center gap-8">
                   <div>
-                    <p className="text-3xl font-bold text-emerald-400">
+                    <p className="text-3xl font-bold text-gain">
                       +{winner.pnlPercent.toFixed(1)}%
                     </p>
                     <p className="text-xs text-muted-foreground">P&L</p>
@@ -277,7 +269,7 @@ export default function ArenaResultsPage() {
                           </TableCell>
                           <TableCell className="text-right">
                             <span
-                              className={`font-bold ${entry.pnlPercent >= 0 ? "text-emerald-400" : "text-red-400"}`}
+                              className={`font-bold ${entry.pnlPercent >= 0 ? "text-gain" : "text-loss"}`}
                             >
                               {entry.pnlPercent >= 0 ? "+" : ""}
                               {entry.pnlPercent.toFixed(1)}%
@@ -318,7 +310,7 @@ export default function ArenaResultsPage() {
             </Button>
           </Link>
         </div>
-      </main>
+      </div>
     </div>
   );
 }

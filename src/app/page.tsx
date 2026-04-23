@@ -29,7 +29,7 @@ import { Badge } from "@/components/ui/badge";
 import InteractiveParticles from "@/components/interactive-particles";
 import CursorFollower from "@/components/cursor-follower";
 import AnimatedCounter from "@/components/animated-counter";
-import ThemeToggle from "@/components/theme-toggle";
+import { useAuth } from "@/components/auth-provider";
 
 // -- Animation variants --
 const stagger = {
@@ -310,10 +310,10 @@ function LiveArenaPreview() {
   const timeLeft = useCountdown(arena?.competitionEnd ?? null);
 
   const riskColors: Record<string, string> = {
-    conservative: "bg-blue-500/20 text-blue-400",
-    balanced: "bg-emerald-500/20 text-emerald-400",
-    aggressive: "bg-amber-500/20 text-amber-400",
-    degen: "bg-red-500/20 text-red-400",
+    conservative: "bg-primary/20 text-primary",
+    balanced: "bg-primary/20 text-primary",
+    aggressive: "bg-secondary/20 text-secondary",
+    degen: "bg-destructive/20 text-destructive",
   };
 
   // Mock data fallback if no arena is available
@@ -371,8 +371,8 @@ function LiveArenaPreview() {
           <Badge
             className={
               displayStatus === "active"
-                ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
-                : "bg-blue-500/20 text-blue-400 border-blue-500/30"
+                ? "bg-primary/20 text-primary border-primary/30"
+                : "bg-muted text-muted-foreground border-border/30"
             }
           >
             {displayStatus === "active" ? "LIVE" : "Completed"}
@@ -422,7 +422,7 @@ function LiveArenaPreview() {
                   </td>
                   <td className="p-2 text-right">
                     <span
-                      className={`font-bold text-sm ${entry.pnlPercent >= 0 ? "text-emerald-400" : "text-red-400"}`}
+                      className={`font-bold text-sm ${entry.pnlPercent >= 0 ? "text-gain" : "text-loss"}`}
                     >
                       {entry.pnlPercent >= 0 ? "+" : ""}
                       {entry.pnlPercent.toFixed(1)}%
@@ -450,6 +450,7 @@ function LiveArenaPreview() {
 
 export default function LandingPage() {
   const heroRef = useRef(null);
+  const { isLoggedIn } = useAuth();
   const { scrollYProgress } = useScroll({
     target: heroRef,
     offset: ["start start", "end start"],
@@ -458,22 +459,7 @@ export default function LandingPage() {
   const heroOpacity = useTransform(scrollYProgress, [0, 0.8], [1, 0]);
 
   return (
-    <div className="min-h-screen">
-      {/* Nav */}
-      <header className="fixed top-0 left-0 right-0 z-50 glass border-b border-border/30">
-        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
-          <Link href="/" className="text-lg font-bold gradient-text">
-            Silicon Coliseum
-          </Link>
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
-            <Link href="/signup">
-              <Button size="sm">Enter the Arena</Button>
-            </Link>
-          </div>
-        </div>
-      </header>
-
+    <div className="min-h-screen -mt-14">
       {/* -- Hero -- */}
       <section
         ref={heroRef}
@@ -507,9 +493,9 @@ export default function LandingPage() {
             transition={{ delay: 0.4, duration: 0.6 }}
             className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4"
           >
-            <Link href="/signup">
+            <Link href={isLoggedIn ? "/dashboard" : "/signup"}>
               <Button size="lg" className="h-12 px-8 text-base font-semibold">
-                Enter the Arena
+                {isLoggedIn ? "Go to Dashboard" : "Enter the Arena"}
                 <ArrowRight className="w-4 h-4 ml-1" />
               </Button>
             </Link>

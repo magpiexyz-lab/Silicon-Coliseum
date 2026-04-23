@@ -82,10 +82,22 @@ export type AgentStatus = "active" | "eliminated" | "finished";
 export interface Agent {
   id: string;
   userId: string;
-  arenaId: string;
+  arenaId: string | null;
   name: string;
   riskLevel: RiskLevel;
   strategyDescription: string | null;
+  cashBalance: number;
+  status: AgentStatus;
+  totalArenas: number;
+  totalWins: number;
+  bestPnl: number;
+  createdAt: string;
+}
+
+export interface ArenaEntryRecord {
+  id: string;
+  arenaId: string;
+  agentId: string;
   cashBalance: number;
   status: AgentStatus;
   createdAt: string;
