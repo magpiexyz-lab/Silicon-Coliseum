@@ -564,7 +564,7 @@ export default function ArenaDetailPage() {
         decayRate: a.decayRate ?? a.decay_rate ?? 0.001,
         competitionStart: a.competitionStart ?? a.competition_start,
         competitionEnd: a.competitionEnd ?? a.competition_end,
-        agentCount: arenaData.agentCount ?? arenaData.entryCount ?? 0,
+        agentCount: arenaData.agents?.length ?? arenaData.agentCount ?? 0,
       });
 
       if (lbRes.ok) {

@@ -73,13 +73,31 @@ export async function getArenaDetail(
 
   const pools: Pool[] = (poolRows || []).map(mapPoolRow);
 
-  // Fetch agents
-  const { data: agentRows } = await supabase
-    .from("agents")
-    .select("*")
+  // Fetch agents via arena_entries (persistent agents model)
+  const { data: entryRows } = await supabase
+    .from("arena_entries")
+    .select("*, agents(*)")
     .eq("arena_id", arenaId);
 
-  const agents: Agent[] = (agentRows || []).map(mapAgentRow);
+  let agents: Agent[] = [];
+  if (entryRows && entryRows.length > 0) {
+    agents = entryRows.map((entry) => {
+      const a = entry.agents as Record<string, unknown>;
+      return mapAgentRow({
+        ...a,
+        arena_id: arenaId,
+        cash_balance: entry.cash_balance,
+        status: entry.status,
+      });
+    });
+  } else {
+    // Fallback: old-style agents with arena_id set directly
+    const { data: agentRows } = await supabase
+      .from("agents")
+      .select("*")
+      .eq("arena_id", arenaId);
+    agents = (agentRows || []).map(mapAgentRow);
+  }
 
   // Fetch recent trades (last 50)
   const { data: tradeRows } = await supabase
@@ -254,13 +272,35 @@ export async function calculateLeaderboard(
 
   const startingBalance = arenaRow?.starting_balance || 10000;
 
-  // Fetch all agents
-  const { data: agentRows } = await supabase
-    .from("agents")
-    .select("*, users(username)")
+  // Fetch agents via arena_entries (persistent agents model)
+  const { data: entryRows } = await supabase
+    .from("arena_entries")
+    .select("*, agents(*, users(username))")
     .eq("arena_id", arenaId);
 
-  if (!agentRows || agentRows.length === 0) return [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let agentRows: any[] = [];
+  if (entryRows && entryRows.length > 0) {
+    agentRows = entryRows.map((entry) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const a = entry.agents as any;
+      return {
+        ...a,
+        arena_id: arenaId,
+        cash_balance: entry.cash_balance,
+        status: entry.status,
+      };
+    });
+  } else {
+    // Fallback to old model
+    const { data: oldRows } = await supabase
+      .from("agents")
+      .select("*, users(username)")
+      .eq("arena_id", arenaId);
+    agentRows = oldRows || [];
+  }
+
+  if (agentRows.length === 0) return [];
 
   // Fetch all pools for this arena
   const { data: poolRows } = await supabase

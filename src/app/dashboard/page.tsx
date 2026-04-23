@@ -75,10 +75,11 @@ export default function DashboardPage() {
       if (!profileRes.ok) throw new Error("Failed to load profile");
 
       const profileData = await profileRes.json();
-      const p = profileData.profile || profileData;
+      const u = profileData.user || {};
+      const p = profileData.profile || {};
       setProfile({
-        username: p.username || "User",
-        cpBalance: p.cpBalance ?? p.cp_balance ?? 100,
+        username: u.username || p.username || "User",
+        cpBalance: u.cpBalance ?? u.cp_balance ?? p.cpBalance ?? 0,
         totalArenas: p.totalArenas ?? p.total_arenas ?? 0,
         wins: p.wins ?? 0,
         top3Finishes: p.top3Finishes ?? p.top3_finishes ?? 0,

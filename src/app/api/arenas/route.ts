@@ -45,11 +45,11 @@ export async function GET(request: NextRequest) {
     const supabase = createServiceClient();
     const arenas = await getArenas(supabase, status);
 
-    // Fetch agent counts for each arena
+    // Fetch agent counts for each arena (via arena_entries)
     const arenasWithCounts = await Promise.all(
       arenas.map(async (arena) => {
         const { count } = await supabase
-          .from("agents")
+          .from("arena_entries")
           .select("*", { count: "exact", head: true })
           .eq("arena_id", arena.id);
 
