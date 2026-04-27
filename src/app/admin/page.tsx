@@ -92,6 +92,7 @@ export default function AdminPage() {
   const [arenaSubmitting, setArenaSubmitting] = useState(false);
   const [evalRunning, setEvalRunning] = useState(false);
   const [evalResult, setEvalResult] = useState<string | null>(null);
+  const [quickArenaRunning, setQuickArenaRunning] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -187,6 +188,29 @@ export default function AdminPage() {
       setError(err instanceof Error ? err.message : "Failed to create token");
     } finally {
       setTokenSubmitting(false);
+    }
+  }
+
+  async function handleQuickArena() {
+    setQuickArenaRunning(true);
+    setEvalResult(null);
+    try {
+      const res = await fetch("/api/admin/new-arena", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "The Silicon Showdown", durationDays: 7 }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setEvalResult(`New arena created: ${data.arenaId}. ${data.log?.length || 0} steps completed.`);
+        await fetchData();
+      } else {
+        setEvalResult(`Error: ${data.error || "Unknown error"}`);
+      }
+    } catch {
+      setEvalResult("Failed to create arena");
+    } finally {
+      setQuickArenaRunning(false);
     }
   }
 
@@ -294,6 +318,19 @@ export default function AdminPage() {
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold gradient-text">Admin Panel</h1>
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleQuickArena}
+              disabled={quickArenaRunning}
+            >
+              {quickArenaRunning ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-1" />
+              ) : (
+                <Swords className="w-4 h-4 mr-1" />
+              )}
+              Quick Arena
+            </Button>
             <Button
               variant="default"
               size="sm"

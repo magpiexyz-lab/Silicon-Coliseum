@@ -58,6 +58,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import RiskLevelBadge from "@/components/risk-level-badge";
+import AgentAvatar from "@/components/agent-avatar";
 import type { RiskLevel } from "@/lib/types";
 
 import { statusColors } from "@/lib/status-colors";
@@ -176,6 +177,15 @@ function useNextEvalCountdown(competitionStart: string | null, status: string) {
 
   return timeLeft;
 }
+
+const TOKEN_EMOJIS: Record<string, string> = {
+  sBTC: "₿", sETH: "💎", sGOLD: "🥇", sSILVER: "🥈", sOIL: "🛢️", sWHEAT: "🌾", vUSD: "💵",
+};
+
+const AGENT_EMOJIS: Record<string, string> = {
+  "Warren Buffett": "🧓", "Elon Musk": "🚀", "Albert Einstein": "🧠",
+  "Kratos": "⚔️", "The Rock": "💪", "Naruto Uzumaki": "🍥", "Naruto": "🍥",
+};
 
 function relativeTime(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -582,23 +592,13 @@ export default function ArenaDetailPage() {
         const poolsRes = await fetch(`/api/pools/${arenaId}`);
         if (poolsRes.ok) {
           const poolsData = await poolsRes.json();
-          const prices = (poolsData.pools || []).map(
-            (p: {
-              token_symbol?: string;
-              tokenSymbol?: string;
-              token_name?: string;
-              tokenName?: string;
-              current_price?: number;
-              currentPrice?: number;
-              price_change?: number;
-              priceChange?: number;
-            }) => ({
-              tokenSymbol: p.token_symbol || p.tokenSymbol || "???",
-              tokenName: p.token_name || p.tokenName || "",
-              currentPrice: p.current_price ?? p.currentPrice ?? 0,
-              priceChange: p.price_change ?? p.priceChange ?? 0,
-            })
-          );
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const prices = (poolsData.pools || []).map((p: any) => ({
+            tokenSymbol: p.token?.symbol || p.token_symbol || p.tokenSymbol || "???",
+            tokenName: p.token?.name || p.token_name || p.tokenName || "",
+            currentPrice: p.current_price ?? p.currentPrice ?? 0,
+            priceChange: p.price_change ?? p.priceChange ?? 0,
+          }));
           setTokenPrices(prices);
         }
       } catch {
@@ -824,18 +824,15 @@ export default function ArenaDetailPage() {
                                 }}
                               >
                                 <TableCell>
-                                  <span className="font-bold">
-                                    {entry.rank === 1
-                                      ? "1st"
-                                      : entry.rank === 2
-                                        ? "2nd"
-                                        : entry.rank === 3
-                                          ? "3rd"
-                                          : `#${entry.rank}`}
+                                  <span className="font-black text-lg">
+                                    {entry.rank === 1 ? "🏆" : entry.rank === 2 ? "🥈" : entry.rank === 3 ? "🥉" : `#${entry.rank}`}
                                   </span>
                                 </TableCell>
-                                <TableCell className="font-medium">
-                                  {entry.agentName}
+                                <TableCell>
+                                  <div className="flex items-center gap-2">
+                                    <AgentAvatar name={entry.agentName} size="sm" />
+                                    <span className="font-bold">{entry.agentName}</span>
+                                  </div>
                                 </TableCell>
                                 <TableCell className="text-muted-foreground hidden sm:table-cell">
                                   {entry.ownerUsername}
@@ -954,15 +951,18 @@ export default function ArenaDetailPage() {
                         key={token.tokenSymbol}
                         className="glass rounded-lg p-3 flex items-center justify-between"
                       >
-                        <div>
-                          <p className="font-mono font-medium text-sm">
-                            {token.tokenSymbol}
-                          </p>
-                          {token.tokenName && (
-                            <p className="text-xs text-muted-foreground">
-                              {token.tokenName}
+                        <div className="flex items-center gap-2">
+                          <span className="text-xl">{TOKEN_EMOJIS[token.tokenSymbol] || "🪙"}</span>
+                          <div>
+                            <p className="font-mono font-bold text-sm">
+                              {token.tokenSymbol}
                             </p>
-                          )}
+                            {token.tokenName && (
+                              <p className="text-xs text-muted-foreground">
+                                {token.tokenName}
+                              </p>
+                            )}
+                          </div>
                         </div>
                         <div className="text-right">
                           <p className="font-mono font-bold text-sm">
@@ -1043,8 +1043,10 @@ export default function ArenaDetailPage() {
                           >
                             {trade.action}
                           </Badge>
-                          <span className="font-medium">{trade.agentName}</span>
+                          <AgentAvatar name={trade.agentName} size="sm" showGlow={false} />
+                          <span className="font-bold">{trade.agentName}</span>
                           <Separator orientation="vertical" className="h-4" />
+                          <span className="text-base">{TOKEN_EMOJIS[trade.tokenSymbol] || "🪙"}</span>
                           <span className="font-mono text-muted-foreground">
                             {trade.tokenSymbol}
                           </span>

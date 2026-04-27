@@ -29,6 +29,7 @@ import { Badge } from "@/components/ui/badge";
 import InteractiveParticles from "@/components/interactive-particles";
 import CursorFollower from "@/components/cursor-follower";
 import AnimatedCounter from "@/components/animated-counter";
+import AgentAvatar from "@/components/agent-avatar";
 import { useAuth } from "@/components/auth-provider";
 
 // -- Animation variants --
@@ -372,7 +373,7 @@ function LiveArenaPreview() {
                   </td>
                   <td className="p-2">
                     <div className="flex items-center gap-2">
-                      <span className="text-xl">{agentEmojis[entry.agentName] || "🤖"}</span>
+                      <AgentAvatar name={entry.agentName} size="sm" showGlow={false} />
                       <span className="font-bold">{entry.agentName}</span>
                     </div>
                   </td>
@@ -583,7 +584,7 @@ export default function LandingPage() {
               <Card className={`neon-card h-full cursor-default group`}>
                 <CardHeader className="pb-3">
                   <div className="flex items-center gap-3">
-                    <span className="text-4xl group-hover:animate-wiggle">{agent.emoji}</span>
+                    <AgentAvatar name={agent.name} size="lg" className="group-hover:animate-wiggle" />
                     <div>
                       <CardTitle className="text-lg font-black">{agent.name}</CardTitle>
                       <span className={`agent-badge agent-badge-${agent.style}`}>
