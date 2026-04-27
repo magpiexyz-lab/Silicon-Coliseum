@@ -22,15 +22,15 @@ const AGENT_EMOJIS: Record<string, string> = {
   "Naruto": "🍥",
 };
 
-// Map celebrity names to their SVG avatar files
+// Map celebrity names to their AI-generated avatar images
 const CELEBRITY_AVATARS: Record<string, string> = {
-  "Warren Buffett": "/avatars/warren-buffett.svg",
-  "Elon Musk": "/avatars/elon-musk.svg",
-  "Albert Einstein": "/avatars/albert-einstein.svg",
-  "Kratos": "/avatars/kratos.svg",
-  "The Rock": "/avatars/the-rock.svg",
-  "Naruto": "/avatars/naruto.svg",
-  "Naruto Uzumaki": "/avatars/naruto.svg",
+  "Warren Buffett": "/avatars/warren-buffett.png",
+  "Elon Musk": "/avatars/elon-musk.png",
+  "Albert Einstein": "/avatars/albert-einstein.png",
+  "Kratos": "/avatars/kratos.png",
+  "The Rock": "/avatars/the-rock.png",
+  "Naruto": "/avatars/naruto.png",
+  "Naruto Uzumaki": "/avatars/naruto.png",
 };
 
 interface AgentAvatarProps {
