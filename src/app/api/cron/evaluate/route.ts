@@ -132,6 +132,7 @@ export async function POST(request: NextRequest) {
             name: a.name,
             riskLevel: a.risk_level || "balanced",
             strategyDescription: a.strategy_description || null,
+            avatarUrl: a.avatar_url || null,
             cashBalance: entry.cash_balance || 0,
             status: entry.status || "active",
             totalArenas: a.total_arenas || 0,

@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <linearGradient id="bg-em" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ec4899"/>
+      <stop offset="100%" style="stop-color:#ef4444"/>
+    </linearGradient>
+    <linearGradient id="shirt-em" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e293b"/>
+      <stop offset="100%" style="stop-color:#0f172a"/>
+    </linearGradient>
+  </defs>
+  <!-- Background circle -->
+  <circle cx="100" cy="100" r="95" fill="url(#bg-em)" />
+  <!-- Body / black t-shirt -->
+  <ellipse cx="100" cy="195" rx="58" ry="45" fill="url(#shirt-em)" />
+  <!-- Neck -->
+  <rect x="88" y="140" width="24" height="20" rx="6" fill="#f0c8a0" />
+  <!-- T-shirt neckline -->
+  <path d="M82,155 Q100,165 118,155" stroke="#0f172a" stroke-width="2" fill="none"/>
+  <!-- Head -->
+  <ellipse cx="100" cy="100" rx="44" ry="50" fill="#f0c8a0" />
+  <!-- Dark hair -->
+  <path d="M60 85 Q62 55 100 50 Q138 55 140 85 L138 78 Q130 58 100 54 Q70 58 62 78 Z" fill="#2d1f14"/>
+  <!-- Hair texture on top -->
+  <path d="M72 72 Q85 48 100 50 Q115 48 128 72" fill="#3b2819" />
+  <!-- Ears -->
+  <ellipse cx="56" cy="102" rx="7" ry="10" fill="#e8b890" />
+  <ellipse cx="144" cy="102" rx="7" ry="10" fill="#e8b890" />
+  <!-- Eyebrows - slightly angular -->
+  <path d="M74 84 Q82 78 94 82" stroke="#3b2819" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <path d="M106 82 Q118 78 126 84" stroke="#3b2819" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <!-- Eyes -->
+  <ellipse cx="84" cy="95" rx="8" ry="6" fill="white"/>
+  <ellipse cx="116" cy="95" rx="8" ry="6" fill="white"/>
+  <!-- Pupils -->
+  <circle cx="85" cy="95" r="4" fill="#3b6b4a"/>
+  <circle cx="117" cy="95" r="4" fill="#3b6b4a"/>
+  <!-- Eye highlights -->
+  <circle cx="87" cy="93" r="1.5" fill="white"/>
+  <circle cx="119" cy="93" r="1.5" fill="white"/>
+  <!-- Nose -->
+  <path d="M98 100 Q100 110 96 112" stroke="#d4a07a" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <!-- Slight smirk - asymmetric smile -->
+  <path d="M82 120 Q95 126 105 124 Q115 122 122 118" stroke="#b87a5a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <!-- Smirk corner uptick on right -->
+  <path d="M122 118 Q124 115 126 116" stroke="#b87a5a" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <!-- Chin definition -->
+  <path d="M85 138 Q100 146 115 138" stroke="#e0b090" stroke-width="1.5" fill="none"/>
+  <!-- Jaw line -->
+  <path d="M60 100 Q65 135 100 145 Q135 135 140 100" fill="none" stroke="#e0b090" stroke-width="0.5"/>
+</svg>

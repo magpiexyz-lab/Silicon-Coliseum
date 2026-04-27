@@ -22,6 +22,17 @@ const AGENT_EMOJIS: Record<string, string> = {
   "Naruto": "🍥",
 };
 
+// Map celebrity names to their SVG avatar files
+const CELEBRITY_AVATARS: Record<string, string> = {
+  "Warren Buffett": "/avatars/warren-buffett.svg",
+  "Elon Musk": "/avatars/elon-musk.svg",
+  "Albert Einstein": "/avatars/albert-einstein.svg",
+  "Kratos": "/avatars/kratos.svg",
+  "The Rock": "/avatars/the-rock.svg",
+  "Naruto": "/avatars/naruto.svg",
+  "Naruto Uzumaki": "/avatars/naruto.svg",
+};
+
 interface AgentAvatarProps {
   name: string;
   avatarUrl?: string | null;
@@ -52,17 +63,10 @@ export default function AgentAvatar({
   const emoji = AGENT_EMOJIS[name] || "🤖";
   const s = sizeMap[size];
 
-  // Find celebrity info for initials fallback
-  const celeb = CELEBRITY_AGENTS.find(
-    (a) => a.name === name || a.displayName === name
-  );
-  const initials = (celeb?.displayName || name)
-    .split(" ")
-    .map((w) => w[0])
-    .join("")
-    .slice(0, 2);
+  // Use provided avatarUrl, or celebrity SVG, or fallback to gradient+emoji
+  const imageUrl = avatarUrl || CELEBRITY_AVATARS[name];
 
-  if (avatarUrl) {
+  if (imageUrl) {
     return (
       <div
         className={`${s.container} rounded-full overflow-hidden ${s.ring} ring-white/20 shrink-0 ${className}`}
@@ -73,7 +77,7 @@ export default function AgentAvatar({
         }
       >
         <img
-          src={avatarUrl}
+          src={imageUrl}
           alt={name}
           className="w-full h-full object-cover"
         />
@@ -81,6 +85,7 @@ export default function AgentAvatar({
     );
   }
 
+  // Fallback: gradient circle with emoji
   return (
     <div
       className={`${s.container} rounded-full flex items-center justify-center shrink-0 ${s.ring} ring-white/20 relative overflow-hidden ${className}`}

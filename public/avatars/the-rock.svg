@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <linearGradient id="bg-tr" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#eab308"/>
+      <stop offset="100%" style="stop-color:#f59e0b"/>
+    </linearGradient>
+    <linearGradient id="skin-tr" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#c68a5c"/>
+      <stop offset="100%" style="stop-color:#b07848"/>
+    </linearGradient>
+  </defs>
+  <!-- Background circle -->
+  <circle cx="100" cy="100" r="95" fill="url(#bg-tr)" />
+  <!-- Muscular body / black shirt -->
+  <ellipse cx="100" cy="200" rx="68" ry="52" fill="#1a1a1a" />
+  <!-- Massive shoulders -->
+  <ellipse cx="48" cy="178" rx="25" ry="18" fill="#1a1a1a" />
+  <ellipse cx="152" cy="178" rx="25" ry="18" fill="#1a1a1a" />
+  <!-- Thick muscular neck -->
+  <rect x="78" y="138" width="44" height="25" rx="10" fill="url(#skin-tr)" />
+  <!-- Neck muscle definition -->
+  <path d="M92 140 L90 160" stroke="#a86838" stroke-width="1" opacity="0.4"/>
+  <path d="M108 140 L110 160" stroke="#a86838" stroke-width="1" opacity="0.4"/>
+  <!-- Head - bald, strong jaw -->
+  <ellipse cx="100" cy="95" rx="46" ry="52" fill="url(#skin-tr)" />
+  <!-- Strong square jaw -->
+  <path d="M58 100 Q60 140 100 148 Q140 140 142 100" fill="url(#skin-tr)"/>
+  <!-- Bald head shine -->
+  <ellipse cx="95" cy="55" rx="24" ry="10" fill="#d4a070" opacity="0.4"/>
+  <!-- Ears -->
+  <ellipse cx="54" cy="98" rx="8" ry="11" fill="#b07040" />
+  <ellipse cx="146" cy="98" rx="8" ry="11" fill="#b07040" />
+  <!-- Eyebrows - THE EYEBROW is raised on left side -->
+  <!-- Left eyebrow - RAISED (the People's Eyebrow!) -->
+  <path d="M70 78 Q80 68 94 74" stroke="#3d2b1f" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+  <!-- Right eyebrow - normal/slightly furrowed -->
+  <path d="M106 80 Q118 76 130 82" stroke="#3d2b1f" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+  <!-- Eyes -->
+  <ellipse cx="82" cy="90" rx="9" ry="7" fill="white"/>
+  <ellipse cx="118" cy="92" rx="9" ry="6" fill="white"/>
+  <!-- Irises - dark brown -->
+  <circle cx="83" cy="90" r="4.5" fill="#2d1a0e"/>
+  <circle cx="119" cy="92" r="4.5" fill="#2d1a0e"/>
+  <!-- Pupils -->
+  <circle cx="83" cy="90" r="2.5" fill="#0a0a0a"/>
+  <circle cx="119" cy="92" r="2.5" fill="#0a0a0a"/>
+  <!-- Eye highlights -->
+  <circle cx="85" cy="88" r="1.5" fill="white"/>
+  <circle cx="121" cy="90" r="1.5" fill="white"/>
+  <!-- Left eye slightly more open (eyebrow raise effect) -->
+  <path d="M73 86 Q82 82 91 86" stroke="#a06838" stroke-width="1" fill="none"/>
+  <!-- Nose - broad -->
+  <path d="M96 96 Q100 110 94 114" stroke="#a06838" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <path d="M104 96 Q100 110 106 114" stroke="#a06838" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <!-- Confident smirk -->
+  <path d="M78 122 Q92 132 100 130 Q108 132 122 122" stroke="#7a4a2a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <!-- Lower lip hint -->
+  <path d="M85 128 Q100 136 115 128" stroke="#9a6848" stroke-width="1.5" fill="none"/>
+  <!-- Goatee hint -->
+  <ellipse cx="100" cy="136" rx="12" ry="6" fill="#3d2b1f" opacity="0.25"/>
+  <!-- Chin dimple -->
+  <circle cx="100" cy="140" r="2" fill="#a06838" opacity="0.3"/>
+  <!-- Tattoo hint on shoulder (Samoan pattern) -->
+  <path d="M40 175 Q45 168 50 175 Q55 168 60 175" stroke="#333" stroke-width="1.5" fill="none" opacity="0.6"/>
+  <path d="M38 180 Q45 173 52 180" stroke="#333" stroke-width="1.5" fill="none" opacity="0.6"/>
+</svg>

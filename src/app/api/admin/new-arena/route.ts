@@ -158,14 +158,20 @@ export async function POST(request: NextRequest) {
 
     if (agents && agents.length > 0) {
       for (const agent of agents) {
-        await supabase.from("arena_entries").insert({
+        const { error: entryError } = await supabase.from("arena_entries").insert({
           arena_id: newArena.id,
           agent_id: agent.id,
           cash_balance: 100000,
           status: "active",
         });
-        log.push(`Entered "${agent.name}" into arena`);
+        if (entryError) {
+          log.push(`FAILED to enter "${agent.name}": ${entryError.message}`);
+        } else {
+          log.push(`Entered "${agent.name}" into arena`);
+        }
       }
+    } else {
+      log.push("WARNING: No celebrity agents found in agents table");
     }
 
     return NextResponse.json({

@@ -200,12 +200,40 @@ function EnterArenaDialog({ arenaId }: { arenaId: string }) {
   const [name, setName] = useState("");
   const [riskLevel, setRiskLevel] = useState<string>("balanced");
   const [strategy, setStrategy] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
   const [selectedAgentId, setSelectedAgentId] = useState("");
   const [availableAgents, setAvailableAgents] = useState<AvailableAgent[]>([]);
   const [loadingAgents, setLoadingAgents] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAvatarUploading(true);
+    setError(null);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/upload/avatar", {
+        method: "POST",
+        body: formData,
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAvatarUrl(data.url);
+      } else {
+        const data = await res.json();
+        setError(data.error || "Failed to upload avatar");
+      }
+    } catch {
+      setError("Failed to upload avatar");
+    } finally {
+      setAvatarUploading(false);
+    }
+  }
 
   useEffect(() => {
     async function fetchAgents() {
@@ -243,6 +271,7 @@ function EnterArenaDialog({ arenaId }: { arenaId: string }) {
           name,
           riskLevel,
           strategyDescription: strategy || undefined,
+          avatarUrl: avatarUrl || undefined,
         };
       }
 
@@ -408,6 +437,33 @@ function EnterArenaDialog({ arenaId }: { arenaId: string }) {
             <p className="text-xs text-muted-foreground">
               {strategy.length}/500 characters
             </p>
+          </div>
+          <div className="space-y-2">
+            <Label>Profile Picture (optional)</Label>
+            <div className="flex items-center gap-3">
+              {avatarUrl ? (
+                <div className="w-12 h-12 rounded-full overflow-hidden ring-2 ring-primary/30 shrink-0">
+                  <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                </div>
+              ) : (
+                <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center shrink-0">
+                  <span className="text-xl">🤖</span>
+                </div>
+              )}
+              <div className="flex-1">
+                <Input
+                  type="file"
+                  accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml"
+                  onChange={handleAvatarUpload}
+                  disabled={avatarUploading}
+                  className="text-xs"
+                />
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  JPG, PNG, GIF, WebP or SVG. Max 2MB.
+                </p>
+              </div>
+              {avatarUploading && <Loader2 className="w-4 h-4 animate-spin shrink-0" />}
+            </div>
           </div>
           <Button
             onClick={handleSubmit}

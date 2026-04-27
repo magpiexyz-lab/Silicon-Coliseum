@@ -11,6 +11,7 @@ const EnterArenaSchema = z.object({
     .enum(["conservative", "balanced", "aggressive", "degen"])
     .default("balanced"),
   strategyDescription: z.string().max(500).optional(),
+  avatarUrl: z.string().optional(),
   agentId: z.string().uuid().optional(),
   quickDeploy: z.boolean().optional(),
 });
@@ -60,7 +61,7 @@ export async function POST(
       );
     }
 
-    const { riskLevel, strategyDescription, agentId } = parsed.data;
+    const { riskLevel, strategyDescription, agentId, avatarUrl } = parsed.data;
 
     // Look up user in users table to get internal ID
     const supabase = createServiceClient();
@@ -94,6 +95,7 @@ export async function POST(
       name: agentName,
       riskLevel,
       strategyDescription,
+      avatarUrl,
       agentId,
     });
 

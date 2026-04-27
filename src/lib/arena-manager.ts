@@ -130,6 +130,7 @@ export async function enterArena(
     riskLevel: string;
     strategyDescription?: string;
     agentId?: string;
+    avatarUrl?: string;
   }
 ): Promise<Agent> {
   // Fetch arena
@@ -223,6 +224,7 @@ export async function enterArena(
         name: agentConfig.name,
         risk_level: agentConfig.riskLevel,
         strategy_description: agentConfig.strategyDescription || null,
+        avatar_url: agentConfig.avatarUrl || null,
         cash_balance: arena.startingBalance,
         status: "active",
       })
@@ -596,6 +598,7 @@ function mapAgentRow(row: Record<string, unknown>): Agent {
     name: row.name as string,
     riskLevel: (row.risk_level as Agent["riskLevel"]) || "balanced",
     strategyDescription: (row.strategy_description as string) || null,
+    avatarUrl: (row.avatar_url as string) || null,
     cashBalance: (row.cash_balance as number) || 0,
     status: (row.status as Agent["status"]) || "active",
     totalArenas: (row.total_arenas as number) || 0,

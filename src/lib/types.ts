@@ -86,6 +86,7 @@ export interface Agent {
   name: string;
   riskLevel: RiskLevel;
   strategyDescription: string | null;
+  avatarUrl: string | null;
   cashBalance: number;
   status: AgentStatus;
   totalArenas: number;

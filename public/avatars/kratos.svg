@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <linearGradient id="bg-kr" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f97316"/>
+      <stop offset="100%" style="stop-color:#dc2626"/>
+    </linearGradient>
+    <linearGradient id="skin-kr" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#e8ddd0"/>
+      <stop offset="100%" style="stop-color:#d4c8b8"/>
+    </linearGradient>
+  </defs>
+  <!-- Background circle -->
+  <circle cx="100" cy="100" r="95" fill="url(#bg-kr)" />
+  <!-- Muscular body/armor -->
+  <ellipse cx="100" cy="200" rx="65" ry="50" fill="#5c4a3a" />
+  <!-- Shoulder armor plates -->
+  <ellipse cx="55" cy="170" rx="22" ry="15" fill="#8b7355" />
+  <ellipse cx="145" cy="170" rx="22" ry="15" fill="#8b7355" />
+  <!-- Armor detail lines -->
+  <path d="M40,168 L70,168" stroke="#6b5a45" stroke-width="1.5"/>
+  <path d="M130,168 L160,168" stroke="#6b5a45" stroke-width="1.5"/>
+  <!-- Thick neck -->
+  <rect x="82" y="138" width="36" height="22" rx="8" fill="url(#skin-kr)" />
+  <!-- Head - bald, angular -->
+  <ellipse cx="100" cy="95" rx="44" ry="50" fill="url(#skin-kr)" />
+  <!-- Bald head highlight -->
+  <ellipse cx="100" cy="65" rx="28" ry="12" fill="#ece5da" opacity="0.5"/>
+  <!-- Ears -->
+  <ellipse cx="56" cy="100" rx="7" ry="10" fill="#d0c0a8" />
+  <ellipse cx="144" cy="100" rx="7" ry="10" fill="#d0c0a8" />
+  <!-- RED WAR PAINT - signature red stripe over left eye -->
+  <!-- Main vertical stripe -->
+  <path d="M72 50 L72 60 Q70 80 68 100 Q67 115 70 130 L78 130 Q80 115 78 100 Q80 80 82 60 L82 50" fill="#cc0000"/>
+  <!-- Stripe continues over eye area -->
+  <path d="M68 80 Q65 90 66 100 Q65 108 68 115 L78 115 Q80 108 80 100 Q82 90 78 80 Z" fill="#cc0000"/>
+  <!-- Angry eyebrows - very angled down toward center -->
+  <path d="M70 82 L95 76" stroke="#8a7a65" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <path d="M130 82 L105 76" stroke="#8a7a65" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <!-- Eyes - fierce, narrowed -->
+  <path d="M72 92 Q82 86 92 92 Q82 96 72 92" fill="white"/>
+  <path d="M108 92 Q118 86 128 92 Q118 96 108 92" fill="white"/>
+  <!-- Amber/gold irises -->
+  <circle cx="82" cy="91" r="4" fill="#d4a017"/>
+  <circle cx="118" cy="91" r="4" fill="#d4a017"/>
+  <!-- Dark pupils -->
+  <circle cx="82" cy="91" r="2" fill="#1a1a1a"/>
+  <circle cx="118" cy="91" r="2" fill="#1a1a1a"/>
+  <!-- Eye glow/highlights -->
+  <circle cx="84" cy="89" r="1" fill="white"/>
+  <circle cx="120" cy="89" r="1" fill="white"/>
+  <!-- Nose - broad, strong -->
+  <path d="M96 96 Q100 110 94 114 L106 114 Q100 110 104 96" fill="#c8b8a0" stroke="#b8a890" stroke-width="1"/>
+  <!-- Beard - full, pointed goatee -->
+  <path d="M72 115 Q72 125 75 132 Q85 142 100 148 Q115 142 125 132 Q128 125 128 115" fill="#a89880"/>
+  <!-- Beard texture -->
+  <path d="M80 120 L82 135" stroke="#98886a" stroke-width="1" />
+  <path d="M90 118 L92 140" stroke="#98886a" stroke-width="1" />
+  <path d="M100 118 L100 145" stroke="#98886a" stroke-width="1" />
+  <path d="M110 118 L108 140" stroke="#98886a" stroke-width="1" />
+  <path d="M120 120 L118 135" stroke="#98886a" stroke-width="1" />
+  <!-- Angry mouth -->
+  <path d="M82 118 Q90 114 100 115 Q110 114 118 118" stroke="#6a4a3a" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <!-- Scowl lines -->
+  <path d="M94 76 L96 72" stroke="#c0b0a0" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="M106 76 L104 72" stroke="#c0b0a0" stroke-width="1.5" stroke-linecap="round"/>
+</svg>
