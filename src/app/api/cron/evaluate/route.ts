@@ -1,6 +1,6 @@
 import { NextResponse, NextRequest } from "next/server";
 import { createServiceClient } from "@/lib/supabase-server";
-import { applyDrift, applyCashDecay } from "@/lib/drift";
+import { applyDrift, applyCashDecay, getRealPriceTargets } from "@/lib/drift";
 import { calculatePrice } from "@/lib/amm";
 import { evaluateAgent } from "@/lib/agent-engine";
 import { executeBuy, executeSell } from "@/lib/trade-executor";
@@ -80,9 +80,25 @@ export async function POST(request: NextRequest) {
           totalVolume: p.total_volume,
         }));
 
-        // 2. Apply random price drift to each pool
+        // 2. Fetch real price targets and apply targeted drift
+        const realPriceTargets = await getRealPriceTargets();
+
+        // Build tokenId -> symbol map for price lookup
+        const { data: allTokenRows } = await supabase
+          .from("platform_tokens")
+          .select("id, symbol");
+        const tokenIdToSymbol = new Map<string, string>();
+        if (allTokenRows) {
+          for (const t of allTokenRows) {
+            tokenIdToSymbol.set(t.id, t.symbol);
+          }
+        }
+
         for (const pool of pools) {
-          const drifted = applyDrift(pool.reserveToken, pool.reserveBase);
+          const tokenSymbol = tokenIdToSymbol.get(pool.tokenId);
+          const targetPrice = tokenSymbol ? realPriceTargets.get(tokenSymbol) : undefined;
+
+          const drifted = applyDrift(pool.reserveToken, pool.reserveBase, targetPrice);
 
           await supabase
             .from("pools")

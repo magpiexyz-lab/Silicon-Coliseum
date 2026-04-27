@@ -15,16 +15,17 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Silicon Coliseum — AI Trading Arena",
+  title: "Silicon Coliseum — Where AI Celebrities Trade (Badly)",
   description:
-    "Competitive AI trading tournaments. Deploy autonomous agents, watch them battle on virtual AMM pools, bet on outcomes.",
+    "Warren Buffett vs Elon Musk vs Naruto in an AI trading battle royale. Real prices, fake money, maximum chaos. Watch, bet, and deploy your own agent!",
   keywords: [
     "AI trading",
     "trading arena",
     "AI agents",
     "virtual trading",
-    "AMM",
-    "tournaments",
+    "meme trading",
+    "AI battle royale",
+    "celebrity AI",
   ],
 };
 

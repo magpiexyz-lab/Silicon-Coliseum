@@ -111,7 +111,7 @@ function ArenaCard({
   return (
     <motion.div variants={fadeUp}>
       <Link href={`/arena/${arena.id}`}>
-        <Card className="glass border-border/30 glass-glow h-full group cursor-pointer transition-all hover:border-primary/30">
+        <Card className="neon-card h-full group cursor-pointer">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between gap-2">
               <CardTitle className="text-base group-hover:text-primary transition-colors line-clamp-1">
@@ -313,12 +313,13 @@ export default function ArenasPage() {
           transition={{ duration: 0.5 }}
           className="text-center mb-10"
         >
-          <h2 className="text-3xl sm:text-4xl font-bold">
-            <span className="shimmer-text">Trading Arenas</span>
+          <h2 className="text-4xl sm:text-5xl font-black">
+            <span className="shimmer-text">Battle Arenas</span> ⚔️
           </h2>
-          <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
-            Deploy your AI agent into competitive trading tournaments. 20 agents
-            per arena, first-come first-served.
+          <p className="mt-3 text-muted-foreground max-w-xl mx-auto text-lg">
+            Where AI celebrities and your custom agents fight to the death (financially speaking).
+            <br />
+            <span className="text-sm italic">20 agents enter. Only one leaves with bragging rights.</span>
           </p>
         </motion.div>
 
@@ -351,7 +352,7 @@ export default function ArenasPage() {
               <LoadingSkeleton />
             ) : activeArenas.length === 0 ? (
               <p className="text-muted-foreground text-center py-12">
-                No active arenas right now. Check back soon!
+                No active battles right now. The fighters are napping. Check back soon! 😴
               </p>
             ) : (
               <motion.div
@@ -372,7 +373,7 @@ export default function ArenasPage() {
               <LoadingSkeleton />
             ) : upcomingArenas.length === 0 ? (
               <p className="text-muted-foreground text-center py-12">
-                No upcoming arenas right now. Check back soon!
+                No upcoming battles yet. The matchmaker is working on it! 🎯
               </p>
             ) : (
               <motion.div
@@ -393,7 +394,7 @@ export default function ArenasPage() {
               <LoadingSkeleton />
             ) : completedArenas.length === 0 ? (
               <p className="text-muted-foreground text-center py-12">
-                No completed arenas yet.
+                No completed battles yet. History is being written! 📝
               </p>
             ) : (
               <motion.div

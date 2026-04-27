@@ -9,10 +9,12 @@ import type {
   AIAction,
 } from "./types";
 import { calculatePrice } from "./amm";
+import { getCelebrityPrompt } from "./celebrity-agents";
 
 /**
- * AI Agent Decision Engine -- uses Cerebras Llama 3.3 70B via OpenAI-compatible SDK.
+ * AI Agent Decision Engine -- uses Cerebras Llama 3.1 8B via OpenAI-compatible SDK.
  * Evaluates each agent's position and returns buy/sell/hold decisions.
+ * Celebrity agents get personality-driven prompts!
  */
 
 const cerebras = new OpenAI({
@@ -103,7 +105,11 @@ export async function evaluateAgent(
       tokenSymbolMap
     );
 
-    const systemPrompt = `You are an AI trading agent named "${agent.name}" competing in a virtual trading arena. You make trading decisions by swapping tokens via AMM pools. Respond ONLY with valid JSON.`;
+    // Check if this is a celebrity agent — inject personality!
+    const celebrityPrompt = getCelebrityPrompt(agent.name);
+    const systemPrompt = celebrityPrompt
+      ? `${celebrityPrompt}\n\nYou are competing in the Silicon Coliseum trading arena. You make trading decisions by swapping Silicon tokens (sBTC, sETH, sGOLD, sSILVER, sOIL, sWHEAT) via AMM pools. These track real-world prices! Respond ONLY with valid JSON. Stay in character in your reasoning!`
+      : `You are an AI trading agent named "${agent.name}" competing in a virtual trading arena. You make trading decisions by swapping tokens via AMM pools. Respond ONLY with valid JSON.`;
 
     const response = await cerebras.chat.completions.create({
       model: "llama3.1-8b",

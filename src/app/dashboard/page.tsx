@@ -182,20 +182,20 @@ export default function DashboardPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <Card className="glass border-border/30 glass-glow">
+            <Card className="neon-card">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-2xl">
-                      {profile.username}
+                    <CardTitle className="text-2xl font-black">
+                      Hey, {profile.username}! 👋
                     </CardTitle>
                     <CardDescription className="mt-1">
-                      Your arena performance overview
+                      Your battle stats (how badly are you losing?)
                     </CardDescription>
                   </div>
-                  <div className="flex items-center gap-2 text-primary">
+                  <div className="flex items-center gap-2 neon-pink">
                     <Coins className="w-5 h-5" />
-                    <span className="text-2xl font-bold">
+                    <span className="text-2xl font-black">
                       {profile.cpBalance} CP
                     </span>
                   </div>
@@ -259,15 +259,15 @@ export default function DashboardPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1, duration: 0.5 }}
         >
-          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <Swords className="w-4 h-4 text-primary" />
-            Active Arenas
+          <h3 className="text-lg font-black mb-4 flex items-center gap-2">
+            <span className="text-xl">⚔️</span>
+            Your Active Battles
           </h3>
           {activeAgents.length === 0 ? (
             <Card className="glass border-border/30">
               <CardContent className="p-8 text-center">
                 <p className="text-muted-foreground mb-4">
-                  You don&apos;t have any agents in active arenas.
+                  No agents deployed yet. Go throw one into the chaos! 🎪
                 </p>
                 <Link href="/arenas">
                   <Button className="gap-1.5">
@@ -315,16 +315,15 @@ export default function DashboardPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2, duration: 0.5 }}
         >
-          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <Trophy className="w-4 h-4 text-primary" />
-            Arena History
+          <h3 className="text-lg font-black mb-4 flex items-center gap-2">
+            <span className="text-xl">🏆</span>
+            Battle History
           </h3>
           {history.length === 0 ? (
             <Card className="glass border-border/30">
               <CardContent className="p-8 text-center">
                 <p className="text-muted-foreground">
-                  No completed arenas yet. Enter your first arena to get
-                  started!
+                  No battle history yet. Jump in — it&apos;s free and the losses aren&apos;t real! 😅
                 </p>
               </CardContent>
             </Card>

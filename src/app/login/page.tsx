@@ -62,20 +62,20 @@ export default function LoginPage() {
         transition={{ duration: 0.5, ease: "easeOut" }}
         className="z-10 w-full max-w-md px-4"
       >
-        <Card className="glass border-border/50">
+        <Card className="neon-card">
           <CardHeader className="text-center space-y-4">
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-              className="mx-auto w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center"
+              className="mx-auto text-5xl"
             >
-              <LogIn className="w-8 h-8 text-primary" />
+              👋
             </motion.div>
             <div>
-              <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
+              <CardTitle className="text-2xl font-black">Welcome Back, Fighter!</CardTitle>
               <CardDescription className="mt-2">
-                Sign in to enter the arena
+                The agents missed you. (They didn&apos;t, they&apos;re AI.)
               </CardDescription>
             </div>
           </CardHeader>

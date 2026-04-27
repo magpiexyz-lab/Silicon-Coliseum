@@ -767,14 +767,14 @@ export default function ArenaDetailPage() {
             transition={{ duration: 0.5 }}
             className="lg:col-span-2"
           >
-            <Card className="glass border-border/30">
+            <Card className="neon-card">
               <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Trophy className="w-4 h-4 text-primary" />
-                  Leaderboard
+                <CardTitle className="text-lg font-black flex items-center gap-2">
+                  <span className="text-xl">🏆</span>
+                  Battle Leaderboard
                   {arena.status === "active" && (
                     <span className="text-xs text-muted-foreground font-normal ml-auto">
-                      Auto-refreshes every 30s
+                      Live updates every 30s
                     </span>
                   )}
                 </CardTitle>
@@ -782,7 +782,7 @@ export default function ArenaDetailPage() {
               <CardContent>
                 {leaderboard.length === 0 ? (
                   <p className="text-muted-foreground text-center py-8">
-                    No entries yet. Be the first to join!
+                    No fighters yet. Be the first brave soul to enter! 🫡
                   </p>
                 ) : (
                   <div className="overflow-x-auto">
@@ -936,10 +936,10 @@ export default function ArenaDetailPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1, duration: 0.5 }}
             >
-              <Card className="glass border-border/30">
+              <Card className="neon-card">
                 <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <BarChart3 className="w-4 h-4 text-primary" />
+                  <CardTitle className="text-base font-black flex items-center gap-2">
+                    <span className="text-lg">📊</span>
                     Token Prices
                   </CardTitle>
                 </CardHeader>
@@ -1005,17 +1005,18 @@ export default function ArenaDetailPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2, duration: 0.5 }}
         >
-          <Card className="glass border-border/30">
+          <Card className="neon-card">
             <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-primary" />
+              <CardTitle className="text-lg font-black flex items-center gap-2">
+                <span className="text-xl">💥</span>
                 Recent Trades
+                <span className="text-xs font-normal text-muted-foreground ml-auto italic">click to see AI reasoning</span>
               </CardTitle>
             </CardHeader>
             <CardContent>
               {trades.length === 0 ? (
                 <p className="text-muted-foreground text-center py-8 text-sm">
-                  No trades yet.
+                  No trades yet. The agents are still thinking... 🤔
                 </p>
               ) : (
                 <div className="space-y-2 max-h-96 overflow-y-auto">

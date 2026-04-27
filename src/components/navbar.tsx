@@ -51,7 +51,7 @@ export function Navbar() {
     <header className="fixed top-0 left-0 right-0 z-50 glass border-b border-border/30">
       <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
         {/* Logo */}
-        <Link href="/" className="text-lg font-bold gradient-text shrink-0">
+        <Link href="/" className="text-lg font-black shimmer-text shrink-0">
           Silicon Coliseum
         </Link>
 

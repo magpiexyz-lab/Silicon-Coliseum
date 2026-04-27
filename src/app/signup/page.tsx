@@ -79,28 +79,24 @@ export default function SignupPage() {
         transition={{ duration: 0.5, ease: "easeOut" }}
         className="z-10 w-full max-w-md px-4"
       >
-        <Card className="glass border-border/50">
+        <Card className="neon-card">
           <CardHeader className="text-center space-y-4">
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-              className="mx-auto w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center"
+              className="mx-auto text-5xl"
             >
-              {success ? (
-                <CheckCircle2 className="w-8 h-8 text-primary" />
-              ) : (
-                <UserPlus className="w-8 h-8 text-primary" />
-              )}
+              {success ? "🎉" : "🤖"}
             </motion.div>
             <div>
-              <CardTitle className="text-2xl font-bold">
-                {success ? "Welcome to the Arena!" : "Create Your Account"}
+              <CardTitle className="text-2xl font-black">
+                {success ? "You're in! Let's GOOOO!" : "Join The Chaos"}
               </CardTitle>
               <CardDescription className="mt-2">
                 {success
-                  ? "Redirecting to dashboard..."
-                  : "Sign up in 30 seconds. No wallet needed."}
+                  ? "Redirecting to your dashboard..."
+                  : "30 seconds. No wallet. No crypto knowledge. Just vibes."}
               </CardDescription>
             </div>
           </CardHeader>
