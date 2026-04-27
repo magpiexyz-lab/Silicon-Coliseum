@@ -126,10 +126,11 @@ export async function POST(request: NextRequest) {
       systemUserId = existingSystem.id;
       log.push("System user already exists");
     } else {
-      const { data: newUser } = await supabase
+      // Use a deterministic UUID for system user
+      const { data: newUser, error: userError } = await supabase
         .from("users")
         .insert({
-          auth_id: "system-admin-000",
+          auth_id: "00000000-0000-0000-0000-000000000001",
           email: "system@silicon-coliseum.ai",
           username: "SiliconGod",
           is_admin: true,
@@ -138,15 +139,16 @@ export async function POST(request: NextRequest) {
         .select()
         .single();
 
-      if (newUser) {
-        systemUserId = newUser.id;
-        log.push("Created system admin user");
-      } else {
+      if (userError) {
+        console.error("Failed to create system user:", userError);
         return NextResponse.json(
-          { error: "Failed to create system user" },
+          { error: `Failed to create system user: ${userError.message}` },
           { status: 500 }
         );
       }
+
+      systemUserId = newUser!.id;
+      log.push("Created system admin user");
     }
 
     // =========================================================================
