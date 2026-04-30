@@ -43,10 +43,14 @@ export async function POST(request: NextRequest) {
     // Parse optional body
     let arenaName = "The Silicon Showdown";
     let durationDays = 7;
+    let bettingPhaseDays = 1; // 24h betting phase by default
+    let betType: "cp_only" | "sol_only" | "both" = "both";
     try {
       const body = await request.json();
       if (body.name) arenaName = body.name;
       if (body.durationDays) durationDays = body.durationDays;
+      if (body.bettingPhaseDays !== undefined) bettingPhaseDays = body.bettingPhaseDays;
+      if (body.betType) betType = body.betType;
     } catch {
       // no body, use defaults
     }
@@ -96,6 +100,7 @@ export async function POST(request: NextRequest) {
     // Create new arena
     const startTime = new Date();
     const endTime = new Date(startTime.getTime() + durationDays * 24 * 60 * 60 * 1000);
+    const bettingPhaseEnd = new Date(startTime.getTime() + bettingPhaseDays * 24 * 60 * 60 * 1000);
 
     const { data: newArena, error: arenaError } = await supabase
       .from("arenas")
@@ -108,6 +113,8 @@ export async function POST(request: NextRequest) {
         decay_rate: 0.001,
         competition_start: startTime.toISOString(),
         competition_end: endTime.toISOString(),
+        betting_phase_end: bettingPhaseEnd.toISOString(),
+        bet_type: betType,
         created_by: systemUser.id,
       })
       .select()

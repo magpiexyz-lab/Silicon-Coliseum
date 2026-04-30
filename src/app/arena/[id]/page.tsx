@@ -22,6 +22,7 @@ import {
   ChevronUp,
   Brain,
   Timer,
+  Wallet,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -59,6 +60,7 @@ import {
 } from "@/components/ui/table";
 import RiskLevelBadge from "@/components/risk-level-badge";
 import AgentAvatar from "@/components/agent-avatar";
+import { SolBetPanel } from "@/components/sol-bet-panel";
 import type { RiskLevel } from "@/lib/types";
 
 import { statusColors } from "@/lib/status-colors";
@@ -74,6 +76,8 @@ interface ArenaDetail {
   decayRate: number;
   competitionStart: string | null;
   competitionEnd: string | null;
+  bettingPhaseEnd: string | null;
+  betType: "cp_only" | "sol_only" | "both";
   agentCount: number;
 }
 
@@ -492,17 +496,22 @@ function EnterArenaDialog({ arenaId }: { arenaId: string }) {
 function PlaceBetDialog({
   arenaId,
   agents,
+  betType,
 }: {
   arenaId: string;
   agents: LeaderboardEntry[];
+  betType: "cp_only" | "sol_only" | "both";
 }) {
+  const [currency, setCurrency] = useState<"cp" | "sol">(
+    betType === "sol_only" ? "sol" : "cp"
+  );
   const [selectedAgent, setSelectedAgent] = useState("");
   const [cpAmount, setCpAmount] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  async function handleBet() {
+  async function handleCpBet() {
     if (!selectedAgent || !cpAmount) return;
     setSubmitting(true);
     setError(null);
@@ -542,8 +551,36 @@ function PlaceBetDialog({
     );
   }
 
+  const showCp = betType === "cp_only" || betType === "both";
+  const showSol = betType === "sol_only" || betType === "both";
+
   return (
     <div className="space-y-4">
+      {/* Currency toggle */}
+      {showCp && showSol && (
+        <div className="flex gap-2">
+          <Button
+            variant={currency === "cp" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setCurrency("cp")}
+            className="flex-1 gap-1.5"
+          >
+            <Coins className="w-3.5 h-3.5" />
+            Bet with CP
+          </Button>
+          <Button
+            variant={currency === "sol" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setCurrency("sol")}
+            className="flex-1 gap-1.5"
+          >
+            <Wallet className="w-3.5 h-3.5" />
+            Bet with SOL
+          </Button>
+        </div>
+      )}
+
+      {/* Agent selection */}
       <div className="space-y-2">
         <Label>Select Agent</Label>
         <Select value={selectedAgent} onValueChange={setSelectedAgent}>
@@ -560,25 +597,50 @@ function PlaceBetDialog({
           </SelectContent>
         </Select>
       </div>
-      <div className="space-y-2">
-        <Label htmlFor="cp-amount">CP Amount</Label>
-        <Input
-          id="cp-amount"
-          type="number"
-          min={1}
-          placeholder="Enter CP amount"
-          value={cpAmount}
-          onChange={(e) => setCpAmount(e.target.value)}
-        />
-      </div>
-      <Button
-        onClick={handleBet}
-        disabled={!selectedAgent || !cpAmount || submitting}
-        className="w-full"
-      >
-        {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
-        Place Bet
-      </Button>
+
+      {/* CP betting */}
+      {currency === "cp" && (
+        <>
+          <div className="space-y-2">
+            <Label htmlFor="cp-amount">CP Amount</Label>
+            <Input
+              id="cp-amount"
+              type="number"
+              min={1}
+              placeholder="Enter CP amount"
+              value={cpAmount}
+              onChange={(e) => setCpAmount(e.target.value)}
+            />
+          </div>
+          <Button
+            onClick={handleCpBet}
+            disabled={!selectedAgent || !cpAmount || submitting}
+            className="w-full"
+          >
+            {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
+            Place CP Bet
+          </Button>
+        </>
+      )}
+
+      {/* SOL betting */}
+      {currency === "sol" && selectedAgent && (
+        <div className="pt-1">
+          <SolBetPanel
+            arenaId={arenaId}
+            agentId={selectedAgent}
+            agentName={agents.find((a) => a.agentId === selectedAgent)?.agentName || "Agent"}
+            onBetPlaced={() => setSuccess(true)}
+          />
+        </div>
+      )}
+
+      {currency === "sol" && !selectedAgent && (
+        <p className="text-sm text-muted-foreground text-center py-2">
+          Select an agent above to bet on with SOL
+        </p>
+      )}
+
       {error && (
         <div className="flex items-start gap-2 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
           <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
@@ -632,6 +694,8 @@ export default function ArenaDetailPage() {
         decayRate: a.decayRate ?? a.decay_rate ?? 0.001,
         competitionStart: a.competitionStart ?? a.competition_start,
         competitionEnd: a.competitionEnd ?? a.competition_end,
+        bettingPhaseEnd: a.bettingPhaseEnd ?? a.betting_phase_end ?? null,
+        betType: a.betType ?? a.bet_type ?? "both",
         agentCount: arenaData.agents?.length ?? arenaData.agentCount ?? 0,
       });
 
@@ -811,20 +875,29 @@ export default function ArenaDetailPage() {
             )}
 
             {arena.status === "active" && leaderboard.length > 0 && (
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button size="sm" variant="outline" className="gap-1.5">
-                    <Coins className="w-3.5 h-3.5" />
-                    Place Bet
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Place a Bet</DialogTitle>
-                  </DialogHeader>
-                  <PlaceBetDialog arenaId={arenaId} agents={leaderboard} />
-                </DialogContent>
-              </Dialog>
+              (() => {
+                const bettingOpen = !arena.bettingPhaseEnd || new Date(arena.bettingPhaseEnd) > new Date();
+                return bettingOpen ? (
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button size="sm" variant="outline" className="gap-1.5">
+                        <Coins className="w-3.5 h-3.5" />
+                        Place Bet
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Place a Bet</DialogTitle>
+                      </DialogHeader>
+                      <PlaceBetDialog arenaId={arenaId} agents={leaderboard} betType={arena.betType} />
+                    </DialogContent>
+                  </Dialog>
+                ) : (
+                  <Badge variant="outline" className="text-muted-foreground">
+                    Betting Closed
+                  </Badge>
+                );
+              })()
             )}
           </div>
         </div>
