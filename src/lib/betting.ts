@@ -1,8 +1,13 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 
 /**
- * Betting System -- spectators bet CP on which agents will finish top 3.
- * Losing pool splits 50/50 between agent owners and winning bettors.
+ * Betting System -- spectators bet CP or SOL on which agents will finish top 3.
+ *
+ * CP bets: Losing pool splits 50/50 between agent owners and winning bettors.
+ *
+ * SOL bets: 50% of losers' SOL goes to top arena performers:
+ *   1st: 50%, 2nd: 25%, 3rd: 20%, contract fee: 5%
+ * Remaining 50% of losers' SOL goes to winning bettors (proportional to bet size).
  */
 
 /**
@@ -213,4 +218,142 @@ export async function resolveBets(
       }
     }
   }
+}
+
+// ============================================================================
+// SOL Bet Resolution
+// ============================================================================
+
+/**
+ * Resolve SOL bets for a completed arena.
+ * Distribution:
+ *   50% of losers' SOL → top 3 performers (50%/25%/20%) + 5% fee
+ *   50% of losers' SOL → winning bettors (proportional to bet size)
+ *
+ * Creates sol_rewards records for each winner to claim on-chain.
+ */
+export async function resolveSolBets(
+  supabase: SupabaseClient,
+  arenaId: string,
+  topAgentIds: string[]
+): Promise<{
+  performerRewards: { userId: string; walletAddress: string; amount: number }[];
+  bettorRewards: { userId: string; walletAddress: string; amount: number }[];
+  feeAmount: number;
+}> {
+  const top3Ids = new Set(topAgentIds.slice(0, 3));
+
+  // Fetch all pending SOL bets for this arena
+  const { data: solBets, error: betsError } = await supabase
+    .from("bets")
+    .select("*")
+    .eq("arena_id", arenaId)
+    .eq("bet_currency", "sol")
+    .eq("status", "pending");
+
+  if (betsError || !solBets || solBets.length === 0) {
+    return { performerRewards: [], bettorRewards: [], feeAmount: 0 };
+  }
+
+  const winningBets = solBets.filter((b) => top3Ids.has(b.agent_id));
+  const losingBets = solBets.filter((b) => !top3Ids.has(b.agent_id));
+
+  const losingPoolLamports = losingBets.reduce(
+    (sum, b) => sum + (b.sol_amount || 0),
+    0
+  );
+
+  const performerPool = Math.floor(losingPoolLamports * 0.5);
+  const bettorPool = losingPoolLamports - performerPool;
+
+  // --- Performer rewards (50% of losing pool) ---
+  // 1st: 50%, 2nd: 25%, 3rd: 20%, 5% fee
+  const performerDistribution = [0.5, 0.25, 0.2];
+  const feeRate = 0.05;
+  const feeAmount = Math.floor(performerPool * feeRate);
+  const performerRewards: { userId: string; walletAddress: string; amount: number }[] = [];
+
+  for (let i = 0; i < Math.min(topAgentIds.length, 3); i++) {
+    const agentId = topAgentIds[i];
+    const share = Math.floor(performerPool * (performerDistribution[i] || 0));
+    if (share <= 0) continue;
+
+    const { data: agent } = await supabase
+      .from("agents")
+      .select("user_id")
+      .eq("id", agentId)
+      .single();
+
+    if (!agent) continue;
+
+    const { data: owner } = await supabase
+      .from("users")
+      .select("id, wallet_address")
+      .eq("id", agent.user_id)
+      .single();
+
+    if (!owner?.wallet_address) continue;
+
+    performerRewards.push({
+      userId: owner.id,
+      walletAddress: owner.wallet_address,
+      amount: share,
+    });
+
+    await supabase.from("sol_rewards").insert({
+      arena_id: arenaId,
+      user_id: owner.id,
+      wallet_address: owner.wallet_address,
+      reward_type: "performer",
+      sol_amount: share,
+    });
+  }
+
+  // --- Bettor rewards (50% of losing pool → winning bettors proportional) ---
+  const totalWinningBetLamports = winningBets.reduce(
+    (sum, b) => sum + (b.sol_amount || 0),
+    0
+  );
+  const bettorRewards: { userId: string; walletAddress: string; amount: number }[] = [];
+
+  for (const bet of winningBets) {
+    const proportion =
+      totalWinningBetLamports > 0
+        ? (bet.sol_amount || 0) / totalWinningBetLamports
+        : 0;
+    const winnings = Math.floor(bettorPool * proportion);
+    const payout = (bet.sol_amount || 0) + winnings; // original + winnings
+
+    // Update bet status
+    await supabase
+      .from("bets")
+      .update({ status: "won", payout: payout })
+      .eq("id", bet.id);
+
+    if (bet.wallet_address && payout > 0) {
+      bettorRewards.push({
+        userId: bet.user_id,
+        walletAddress: bet.wallet_address,
+        amount: payout,
+      });
+
+      await supabase.from("sol_rewards").insert({
+        arena_id: arenaId,
+        user_id: bet.user_id,
+        wallet_address: bet.wallet_address,
+        reward_type: "bettor",
+        sol_amount: payout,
+      });
+    }
+  }
+
+  // Mark losing SOL bets
+  for (const bet of losingBets) {
+    await supabase
+      .from("bets")
+      .update({ status: "lost", payout: 0 })
+      .eq("id", bet.id);
+  }
+
+  return { performerRewards, bettorRewards, feeAmount };
 }

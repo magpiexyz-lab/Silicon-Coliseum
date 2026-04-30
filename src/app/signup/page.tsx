@@ -21,6 +21,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import InteractiveParticles from "@/components/interactive-particles";
+import { ClaimCpDialog } from "@/components/claim-cp-dialog";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -30,6 +31,7 @@ export default function SignupPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [showClaimDialog, setShowClaimDialog] = useState(false);
 
   const isValidUsername =
     username.length >= 2 &&
@@ -57,7 +59,7 @@ export default function SignupPage() {
 
       if (res.ok) {
         setSuccess(true);
-        setTimeout(() => router.push("/dashboard"), 1500);
+        setShowClaimDialog(true);
       } else {
         setError(data.error || "Registration failed. Please try again.");
       }
@@ -72,6 +74,14 @@ export default function SignupPage() {
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
       <div className="absolute inset-0 mesh-gradient" />
       <InteractiveParticles count={50} className="absolute inset-0" />
+
+      <ClaimCpDialog
+        open={showClaimDialog}
+        onOpenChange={(open) => {
+          setShowClaimDialog(open);
+          if (!open) router.push("/dashboard");
+        }}
+      />
 
       <motion.div
         initial={{ opacity: 0, y: 20, scale: 0.95 }}

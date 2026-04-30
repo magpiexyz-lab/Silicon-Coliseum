@@ -11,6 +11,7 @@ import {
   Share2,
   Users,
   Loader2,
+  Gift,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,6 +29,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ClaimRewardsButton } from "@/components/claim-rewards-button";
 
 interface ResultEntry {
   rank: number;
@@ -39,6 +41,14 @@ interface ResultEntry {
   rewardCp: number;
 }
 
+interface SolReward {
+  id: string;
+  rewardType: string;
+  solAmount: number;
+  isClaimed: boolean;
+  walletAddress: string;
+}
+
 export default function ArenaResultsPage() {
   const params = useParams();
   const arenaId = params.id as string;
@@ -47,6 +57,7 @@ export default function ArenaResultsPage() {
   const [results, setResults] = useState<ResultEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [solRewards, setSolRewards] = useState<SolReward[]>([]);
 
   const fetchData = useCallback(async () => {
     if (!arenaId) return;
@@ -108,6 +119,17 @@ export default function ArenaResultsPage() {
             })
           )
         );
+      }
+
+      // Fetch user's unclaimed SOL rewards
+      try {
+        const myBetsRes = await fetch(`/api/arenas/${arenaId}/my-bets`);
+        if (myBetsRes.ok) {
+          const myBetsData = await myBetsRes.json();
+          setSolRewards(myBetsData.rewards || []);
+        }
+      } catch {
+        /* rewards fetch optional */
       }
     } catch {
       setError("Failed to load results.");
@@ -290,6 +312,56 @@ export default function ArenaResultsPage() {
             </CardContent>
           </Card>
         </motion.div>
+
+        {/* Claim SOL Rewards */}
+        {solRewards.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.5 }}
+          >
+            <Card className="glass border-primary/30 glass-glow">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Gift className="w-4 h-4 text-primary" />
+                  Claim SOL Rewards
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  You have unclaimed SOL rewards from this arena. Connect your wallet to claim.
+                </p>
+                {solRewards.map((reward) => (
+                  <div
+                    key={reward.id}
+                    className="flex items-center justify-between glass rounded-lg p-3"
+                  >
+                    <div>
+                      <p className="text-sm font-medium">
+                        {reward.rewardType === "performer"
+                          ? "Performance Reward"
+                          : "Betting Reward"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {(reward.solAmount / 1_000_000_000).toFixed(4)} SOL
+                      </p>
+                    </div>
+                    <ClaimRewardsButton
+                      arenaId={arenaId}
+                      rewardLamports={reward.solAmount}
+                      rewardId={reward.id}
+                      onClaimed={() => {
+                        setSolRewards((prev) =>
+                          prev.filter((r) => r.id !== reward.id)
+                        );
+                      }}
+                    />
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
 
         {/* Actions */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">

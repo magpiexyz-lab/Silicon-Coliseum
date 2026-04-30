@@ -13,6 +13,7 @@ import {
   Menu,
   LogOut,
   ChevronDown,
+  Plus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,6 +31,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import ThemeToggle from "@/components/theme-toggle";
 import { useAuth } from "@/components/auth-provider";
+import { ConnectWalletButton } from "@/components/connect-wallet-button";
+import { BuyCpDialog } from "@/components/buy-cp-dialog";
 
 const navLinks = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -43,6 +46,7 @@ export function Navbar() {
   const pathname = usePathname();
   const { user, cpBalance, isAdmin, isLoggedIn, isLoading, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [buyCpOpen, setBuyCpOpen] = useState(false);
 
   // Don't show navbar on landing page when not logged in
   const isLanding = pathname === "/";
@@ -97,13 +101,28 @@ export function Navbar() {
 
             {/* Right side */}
             <div className="flex items-center gap-2 ml-auto">
-              {/* CP Balance */}
-              <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full glass text-sm font-medium">
+              {/* CP Balance + Buy */}
+              <div className="hidden sm:flex items-center gap-1 px-3 py-1.5 rounded-full glass text-sm font-medium">
                 <Coins className="w-3.5 h-3.5 text-primary" />
                 <span>{cpBalance.toLocaleString()} CP</span>
+                <button
+                  onClick={() => setBuyCpOpen(true)}
+                  className="ml-1 p-0.5 rounded-full hover:bg-primary/20 transition-colors"
+                  title="Buy CP with SOL"
+                >
+                  <Plus className="w-3 h-3 text-primary" />
+                </button>
+              </div>
+
+              {/* Wallet Connect */}
+              <div className="hidden sm:block">
+                <ConnectWalletButton />
               </div>
 
               <ThemeToggle />
+
+              {/* Buy CP Dialog */}
+              <BuyCpDialog open={buyCpOpen} onOpenChange={setBuyCpOpen} />
 
               {/* User dropdown */}
               <DropdownMenu>

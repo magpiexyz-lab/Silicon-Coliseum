@@ -89,15 +89,64 @@ export async function POST(
       }
     }
 
+    // Check CP balance for agent creation (10,000 CP required)
+    const AGENT_CREATION_COST = 10000;
+    const { data: cpCheck } = await supabase
+      .from("users")
+      .select("cp_balance")
+      .eq("id", userId)
+      .single();
+
+    if (!cpCheck || cpCheck.cp_balance < AGENT_CREATION_COST) {
+      return NextResponse.json(
+        {
+          error: `Insufficient CP. Agent creation requires ${AGENT_CREATION_COST.toLocaleString()} CP. You have ${cpCheck?.cp_balance?.toLocaleString() || 0} CP. Buy CP with SOL or win bets to earn more.`,
+        },
+        { status: 400 }
+      );
+    }
+
+    // Deduct CP for agent creation
+    await supabase
+      .from("users")
+      .update({ cp_balance: cpCheck.cp_balance - AGENT_CREATION_COST })
+      .eq("id", userId);
+
+    await supabase.from("cp_transactions").insert({
+      user_id: userId,
+      amount: -AGENT_CREATION_COST,
+      type: "spend",
+      source: "agent_creation",
+      arena_id: arenaId,
+    });
+
     const agentName = parsed.data.name || `${username}'s Agent`;
 
-    const agent = await enterArena(supabase, arenaId, userId, {
-      name: agentName,
-      riskLevel,
-      strategyDescription,
-      avatarUrl,
-      agentId,
-    });
+    let agent;
+    try {
+      agent = await enterArena(supabase, arenaId, userId, {
+        name: agentName,
+        riskLevel,
+        strategyDescription,
+        avatarUrl,
+        agentId,
+      });
+    } catch (enterError) {
+      // Refund CP if agent creation fails
+      await supabase
+        .from("users")
+        .update({ cp_balance: cpCheck.cp_balance })
+        .eq("id", userId);
+
+      await supabase
+        .from("cp_transactions")
+        .delete()
+        .eq("user_id", userId)
+        .eq("source", "agent_creation")
+        .eq("arena_id", arenaId);
+
+      throw enterError;
+    }
 
     return NextResponse.json({ agent }, { status: 201 });
   } catch (error) {
@@ -109,7 +158,8 @@ export async function POST(
       message.includes("not accepting") ||
       message.includes("full") ||
       message.includes("already have") ||
-      message.includes("already in")
+      message.includes("already in") ||
+      message.includes("Insufficient CP")
     ) {
       return NextResponse.json({ error: message }, { status: 400 });
     }

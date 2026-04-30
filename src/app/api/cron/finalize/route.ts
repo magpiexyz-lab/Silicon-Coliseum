@@ -1,6 +1,7 @@
 import { NextResponse, NextRequest } from "next/server";
 import { createServiceClient } from "@/lib/supabase-server";
-import { finalizeArena } from "@/lib/arena-manager";
+import { finalizeArena, calculateLeaderboard } from "@/lib/arena-manager";
+import { resolveSolBets } from "@/lib/betting";
 
 export async function POST(request: NextRequest) {
   try {
@@ -43,10 +44,29 @@ export async function POST(request: NextRequest) {
     const finalized: string[] = [];
     const errors: string[] = [];
 
+    const solResults: Record<string, { performers: number; bettors: number; fee: number }> = {};
+
     for (const arena of arenas) {
       try {
+        // Standard finalization (CP bets, rankings, CP rewards)
         await finalizeArena(supabase, arena.id);
         finalized.push(arena.id);
+
+        // SOL bet resolution (creates sol_rewards for on-chain distribution)
+        try {
+          const leaderboard = await calculateLeaderboard(supabase, arena.id);
+          const topAgentIds = leaderboard.map((e) => e.agentId);
+          const solResult = await resolveSolBets(supabase, arena.id, topAgentIds);
+          if (solResult.performerRewards.length > 0 || solResult.bettorRewards.length > 0) {
+            solResults[arena.id] = {
+              performers: solResult.performerRewards.length,
+              bettors: solResult.bettorRewards.length,
+              fee: solResult.feeAmount,
+            };
+          }
+        } catch (solErr) {
+          console.error(`SOL bet resolution failed for arena ${arena.id}:`, solErr);
+        }
       } catch (err) {
         console.error(`Failed to finalize arena ${arena.id}:`, err);
         errors.push(
@@ -58,6 +78,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       message: `Finalized ${finalized.length} arena(s)`,
       finalized,
+      solRewards: Object.keys(solResults).length > 0 ? solResults : undefined,
       errors: errors.length > 0 ? errors : undefined,
     });
   } catch (error) {

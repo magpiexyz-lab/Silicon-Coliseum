@@ -570,6 +570,8 @@ function mapArenaRow(row: Record<string, unknown>): Arena {
     decayRate: (row.decay_rate as number) || 0.001,
     competitionStart: (row.competition_start as string) || null,
     competitionEnd: (row.competition_end as string) || null,
+    bettingPhaseEnd: (row.betting_phase_end as string) || null,
+    betType: (row.bet_type as Arena["betType"]) || "both",
     createdBy: (row.created_by as string) || null,
     createdAt: row.created_at as string,
   };

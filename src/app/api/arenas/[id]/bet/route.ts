@@ -8,6 +8,7 @@ import { rateLimit } from "@/lib/rate-limit";
 const BetSchema = z.object({
   agentId: z.string().uuid("Invalid agent ID"),
   cpAmount: z.number().int().positive("Bet amount must be positive"),
+  betCurrency: z.enum(["cp", "sol"]).default("cp"),
 });
 
 export async function POST(
@@ -55,7 +56,15 @@ export async function POST(
       );
     }
 
-    const { agentId, cpAmount } = parsed.data;
+    const { agentId, cpAmount, betCurrency } = parsed.data;
+
+    // SOL bets are handled via /api/solana/verify-bet
+    if (betCurrency === "sol") {
+      return NextResponse.json(
+        { error: "SOL bets must be placed via /api/solana/verify-bet" },
+        { status: 400 }
+      );
+    }
 
     const supabase = createServiceClient();
 

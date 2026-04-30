@@ -62,6 +62,7 @@ import AgentAvatar from "@/components/agent-avatar";
 import type { RiskLevel } from "@/lib/types";
 
 import { statusColors } from "@/lib/status-colors";
+import type { MyBet } from "@/lib/my-bets";
 
 interface ArenaDetail {
   id: string;
@@ -601,6 +602,7 @@ export default function ArenaDetailPage() {
   const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
   const [agentDetails, setAgentDetails] = useState<Record<string, AgentDetail>>({});
   const [expandedReasoning, setExpandedReasoning] = useState<string | null>(null);
+  const [myBets, setMyBets] = useState<MyBet[]>([]);
 
   const fetchData = useCallback(async () => {
     if (!arenaId) return;
@@ -659,6 +661,17 @@ export default function ArenaDetailPage() {
         }
       } catch {
         /* pools fetch optional */
+      }
+
+      // Fetch user's bets (optional, only works if logged in)
+      try {
+        const myBetsRes = await fetch(`/api/arenas/${arenaId}/my-bets`);
+        if (myBetsRes.ok) {
+          const myBetsData = await myBetsRes.json();
+          setMyBets(myBetsData.bets || []);
+        }
+      } catch {
+        /* my-bets fetch optional */
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load arena");
@@ -1054,6 +1067,77 @@ export default function ArenaDetailPage() {
             )}
           </div>
         </div>
+
+        {/* Your Bets */}
+        {myBets.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15, duration: 0.5 }}
+          >
+            <Card className="neon-card">
+              <CardHeader>
+                <CardTitle className="text-lg font-black flex items-center gap-2">
+                  <span className="text-xl">🎲</span>
+                  Your Bets
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Agent</TableHead>
+                        <TableHead className="text-right">Amount</TableHead>
+                        <TableHead>Currency</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {myBets.map((bet) => (
+                        <TableRow key={bet.id}>
+                          <TableCell className="font-medium">
+                            {bet.agentName}
+                          </TableCell>
+                          <TableCell className="text-right font-mono">
+                            {bet.betCurrency === "sol"
+                              ? `${(bet.solAmount / 1_000_000_000).toFixed(4)} SOL`
+                              : `${bet.cpAmount.toLocaleString()} CP`}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant="outline"
+                              className={
+                                bet.betCurrency === "sol"
+                                  ? "border-purple-500/30 text-purple-400"
+                                  : "border-primary/30 text-primary"
+                              }
+                            >
+                              {bet.betCurrency.toUpperCase()}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              className={
+                                bet.status === "won"
+                                  ? "bg-primary/20 text-primary border-primary/30"
+                                  : bet.status === "lost"
+                                    ? "bg-destructive/20 text-destructive border-destructive/30"
+                                    : "bg-muted text-muted-foreground border-border/30"
+                              }
+                            >
+                              {bet.status}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
 
         {/* Trade Feed */}
         <motion.div

@@ -10,6 +10,7 @@ export interface User {
   email: string;
   username: string;
   avatarUrl: string | null;
+  walletAddress: string | null;
   isAdmin: boolean;
   cpBalance: number;
   createdAt: string;
@@ -31,6 +32,8 @@ export interface PlatformToken {
 
 export type ArenaStatus = "upcoming" | "active" | "completed" | "cancelled";
 
+export type ArenaBetType = "cp_only" | "sol_only" | "both";
+
 export interface Arena {
   id: string;
   name: string;
@@ -41,6 +44,8 @@ export interface Arena {
   decayRate: number;
   competitionStart: string | null;
   competitionEnd: string | null;
+  bettingPhaseEnd: string | null;
+  betType: ArenaBetType;
   createdBy: string | null;
   createdAt: string;
 }
@@ -148,6 +153,7 @@ export interface ArenaResult {
 // --- Betting ---
 
 export type BetStatus = "pending" | "won" | "lost";
+export type BetCurrency = "cp" | "sol";
 
 export interface Bet {
   id: string;
@@ -155,8 +161,47 @@ export interface Bet {
   userId: string;
   agentId: string;
   cpAmount: number;
+  solAmount: number;
+  betCurrency: BetCurrency;
+  txSignature: string | null;
+  walletAddress: string | null;
   status: BetStatus;
   payout: number;
+  createdAt: string;
+}
+
+// --- SOL Rewards ---
+
+export type SolRewardType = "performer" | "bettor";
+
+export interface SolReward {
+  id: string;
+  arenaId: string;
+  userId: string;
+  walletAddress: string;
+  rewardType: SolRewardType;
+  solAmount: number;
+  isClaimed: boolean;
+  claimTx: string | null;
+  createdAt: string;
+  claimedAt: string | null;
+}
+
+// --- SOL Transactions ---
+
+export type SolTxType = "buy_cp" | "place_bet" | "cancel_bet" | "claim_reward";
+
+export interface SolTransaction {
+  id: string;
+  userId: string;
+  walletAddress: string;
+  txSignature: string;
+  txType: SolTxType;
+  solAmount: number;
+  cpAmount: number | null;
+  arenaId: string | null;
+  agentId: string | null;
+  status: "pending" | "confirmed" | "failed";
   createdAt: string;
 }
 

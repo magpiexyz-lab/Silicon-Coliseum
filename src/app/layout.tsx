@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import { AuthProvider } from "@/components/auth-provider";
+import { WalletProvider } from "@/components/wallet-provider";
 import { Navbar } from "@/components/navbar";
 import "./globals.css";
 
@@ -48,10 +49,12 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${jetbrainsMono.variable} font-sans min-h-screen`}
       >
-        <AuthProvider>
-          <Navbar />
-          <main className="pt-14">{children}</main>
-        </AuthProvider>
+        <WalletProvider>
+          <AuthProvider>
+            <Navbar />
+            <main className="pt-14">{children}</main>
+          </AuthProvider>
+        </WalletProvider>
         <div className="grain" aria-hidden="true" />
       </body>
     </html>
