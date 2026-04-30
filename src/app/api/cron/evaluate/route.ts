@@ -156,6 +156,15 @@ export async function POST(request: NextRequest) {
           summary.decaysApplied++;
         }
 
+        // 3b. Skip agent trading if still in betting phase
+        const bettingPhaseEnd = arenaRow.betting_phase_end
+          ? new Date(arenaRow.betting_phase_end)
+          : null;
+        if (bettingPhaseEnd && bettingPhaseEnd > new Date()) {
+          // Still in betting phase — apply drift/decay but don't let agents trade
+          continue;
+        }
+
         // 4. Compute pool prices
         const poolPrices = new Map<string, number>();
         for (const pool of pools) {
