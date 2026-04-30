@@ -767,6 +767,9 @@ export default function ArenaDetailPage() {
 
   const timeLeft = useCountdown(arena?.competitionEnd ?? null);
   const nextEval = useNextEvalCountdown(arena?.competitionStart ?? null, arena?.status ?? "");
+  const bettingPhaseEnd = arena?.bettingPhaseEnd ?? null;
+  const isBettingPhase = bettingPhaseEnd ? new Date(bettingPhaseEnd) > new Date() : false;
+  const bettingCountdown = useCountdown(isBettingPhase ? bettingPhaseEnd : null);
 
   const fetchAgentDetail = useCallback(async (agentId: string) => {
     if (agentDetails[agentId]?.trades.length > 0) return; // already loaded
@@ -840,6 +843,29 @@ export default function ArenaDetailPage() {
             </Badge>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
+            {/* Phase badge */}
+            {arena.status === "active" && (
+              <Badge
+                className={
+                  isBettingPhase
+                    ? "bg-green-500/20 text-green-400 border-green-500/30 gap-1"
+                    : "bg-purple-500/20 text-purple-400 border-purple-500/30 gap-1"
+                }
+              >
+                {isBettingPhase ? (
+                  <><Coins className="w-3 h-3" />Betting Phase</>
+                ) : (
+                  <><Swords className="w-3 h-3" />Trading Phase</>
+                )}
+              </Badge>
+            )}
+            {/* Betting phase countdown */}
+            {arena.status === "active" && isBettingPhase && bettingCountdown && (
+              <Badge variant="outline" className="font-mono gap-1 border-green-500/30 text-green-400">
+                <Clock className="w-3 h-3" />
+                Betting ends: {bettingCountdown}
+              </Badge>
+            )}
             {arena.status === "active" && nextEval && (
               <Badge variant="outline" className="font-mono gap-1 border-primary/30 text-primary">
                 <Timer className="w-3 h-3" />
@@ -1161,49 +1187,66 @@ export default function ArenaDetailPage() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Agent</TableHead>
+                        <TableHead className="text-center">Place</TableHead>
                         <TableHead className="text-right">Amount</TableHead>
-                        <TableHead>Currency</TableHead>
+                        <TableHead>Type</TableHead>
                         <TableHead>Status</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {myBets.map((bet) => (
-                        <TableRow key={bet.id}>
-                          <TableCell className="font-medium">
-                            {bet.agentName}
-                          </TableCell>
-                          <TableCell className="text-right font-mono">
-                            {bet.betCurrency === "sol"
-                              ? `${(bet.solAmount / 1_000_000_000).toFixed(4)} SOL`
-                              : `${bet.cpAmount.toLocaleString()} CP`}
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant="outline"
-                              className={
-                                bet.betCurrency === "sol"
-                                  ? "border-purple-500/30 text-purple-400"
-                                  : "border-primary/30 text-primary"
-                              }
-                            >
-                              {bet.betCurrency.toUpperCase()}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              className={
-                                bet.status === "won"
-                                  ? "bg-primary/20 text-primary border-primary/30"
-                                  : bet.status === "lost"
-                                    ? "bg-destructive/20 text-destructive border-destructive/30"
-                                    : "bg-muted text-muted-foreground border-border/30"
-                              }
-                            >
-                              {bet.status}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {myBets.map((bet) => {
+                        const agentRank = leaderboard.find(
+                          (e) => e.agentId === bet.agentId
+                        )?.rank;
+                        return (
+                          <TableRow key={bet.id}>
+                            <TableCell className="font-medium">
+                              {bet.agentName}
+                            </TableCell>
+                            <TableCell className="text-center font-mono">
+                              {agentRank
+                                ? agentRank === 1
+                                  ? "🏆"
+                                  : agentRank === 2
+                                    ? "🥈"
+                                    : agentRank === 3
+                                      ? "🥉"
+                                      : `#${agentRank}`
+                                : "-"}
+                            </TableCell>
+                            <TableCell className="text-right font-mono">
+                              {bet.betCurrency === "sol"
+                                ? `${(bet.solAmount / 1_000_000_000).toFixed(4)} SOL`
+                                : `${bet.cpAmount.toLocaleString()} CP`}
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant="outline"
+                                className={
+                                  bet.betCurrency === "sol"
+                                    ? "border-purple-500/30 text-purple-400"
+                                    : "border-primary/30 text-primary"
+                                }
+                              >
+                                {bet.betCurrency.toUpperCase()}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                className={
+                                  bet.status === "won"
+                                    ? "bg-primary/20 text-primary border-primary/30"
+                                    : bet.status === "lost"
+                                      ? "bg-destructive/20 text-destructive border-destructive/30"
+                                      : "bg-muted text-muted-foreground border-border/30"
+                                }
+                              >
+                                {bet.status}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </div>

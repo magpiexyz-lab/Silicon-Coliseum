@@ -13,6 +13,8 @@ import {
   Eye,
   TrendingUp,
   DollarSign,
+  Coins,
+  Wallet,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -49,6 +51,8 @@ interface ArenaData {
   maxAgents: number;
   competitionStart: string | null;
   competitionEnd: string | null;
+  bettingPhaseEnd: string | null;
+  betType: "cp_only" | "sol_only" | "both";
   agentCount?: number;
   _agentCount?: number;
   // snake_case variants from API
@@ -56,6 +60,8 @@ interface ArenaData {
   max_agents?: number;
   competition_start?: string | null;
   competition_end?: string | null;
+  betting_phase_end?: string | null;
+  bet_type?: string;
   // Results for completed arenas
   winnerName?: string;
   topPnl?: number;
@@ -103,9 +109,16 @@ function ArenaCard({
   const endTime = arena.competitionEnd ?? arena.competition_end ?? null;
   const startTime = arena.competitionStart ?? arena.competition_start ?? null;
   const startingBalance = arena.startingBalance ?? arena.starting_balance ?? 10000;
+  const bettingEnd = arena.bettingPhaseEnd ?? arena.betting_phase_end ?? null;
+  const betType = arena.betType ?? arena.bet_type ?? "both";
+
+  const isBettingPhase = bettingEnd ? new Date(bettingEnd) > new Date() : false;
 
   const timeLeft = useCountdown(
     variant === "active" ? endTime : null
+  );
+  const bettingTimeLeft = useCountdown(
+    variant === "active" && isBettingPhase ? bettingEnd : null
   );
 
   return (
@@ -117,17 +130,34 @@ function ArenaCard({
               <CardTitle className="text-base group-hover:text-primary transition-colors line-clamp-1">
                 {arena.name}
               </CardTitle>
-              <Badge
-                className={
-                  variant === "active"
-                    ? "bg-primary/20 text-primary border-primary/30"
-                    : variant === "upcoming"
+              <div className="flex items-center gap-1.5 shrink-0">
+                {variant === "active" && (
+                  <Badge
+                    className={
+                      isBettingPhase
+                        ? "bg-green-500/20 text-green-400 border-green-500/30"
+                        : "bg-purple-500/20 text-purple-400 border-purple-500/30"
+                    }
+                  >
+                    {isBettingPhase ? (
+                      <><Coins className="w-3 h-3 mr-1" />Betting</>
+                    ) : (
+                      <><Swords className="w-3 h-3 mr-1" />Trading</>
+                    )}
+                  </Badge>
+                )}
+                <Badge
+                  className={
+                    variant === "active"
                       ? "bg-primary/20 text-primary border-primary/30"
-                      : "bg-muted text-muted-foreground border-border/30"
-                }
-              >
-                {variant}
-              </Badge>
+                      : variant === "upcoming"
+                        ? "bg-primary/20 text-primary border-primary/30"
+                        : "bg-muted text-muted-foreground border-border/30"
+                  }
+                >
+                  {variant}
+                </Badge>
+              </div>
             </div>
             {arena.description && (
               <CardDescription className="line-clamp-2 mt-1">
@@ -152,6 +182,32 @@ function ArenaCard({
                   <Clock className="w-3.5 h-3.5 text-primary" />
                   <span className="text-primary font-mono font-medium">
                     {timeLeft}
+                  </span>
+                </div>
+              )}
+
+              {/* Betting phase countdown */}
+              {variant === "active" && isBettingPhase && bettingTimeLeft && (
+                <div className="flex items-center gap-1.5 text-muted-foreground col-span-2">
+                  <Coins className="w-3.5 h-3.5 text-green-400" />
+                  <span className="text-xs">
+                    Betting ends:{" "}
+                    <span className="text-green-400 font-mono font-medium">
+                      {bettingTimeLeft}
+                    </span>
+                  </span>
+                </div>
+              )}
+
+              {/* Bet type indicator for active arenas */}
+              {variant === "active" && (
+                <div className="flex items-center gap-1.5 text-muted-foreground col-span-2">
+                  <Wallet className="w-3.5 h-3.5 text-primary" />
+                  <span className="text-xs">
+                    Bets:{" "}
+                    <span className="text-foreground">
+                      {betType === "both" ? "CP + SOL" : betType === "sol_only" ? "SOL only" : "CP only"}
+                    </span>
                   </span>
                 </div>
               )}
