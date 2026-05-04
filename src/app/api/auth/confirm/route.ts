@@ -1,7 +1,6 @@
 import { NextResponse, NextRequest } from "next/server";
 import { createServiceClient, createServerClient } from "@/lib/supabase-server";
 import { createSession, setSessionCookie } from "@/lib/auth";
-import { awardSignupBonus } from "@/lib/points";
 
 /**
  * GET /api/auth/confirm
@@ -40,10 +39,6 @@ export async function GET(request: NextRequest) {
         .maybeSingle();
 
       if (existingUser) {
-        try {
-          await awardSignupBonus(supabase, existingUser.id);
-        } catch { /* Non-fatal */ }
-
         const token = await createSession(existingUser.id, existingUser.email);
         const response = NextResponse.redirect(
           new URL("/dashboard?confirmed=true", origin)
@@ -86,10 +81,6 @@ export async function GET(request: NextRequest) {
         total_trades: 0,
       });
 
-      try {
-        await awardSignupBonus(supabase, newUser.id);
-      } catch { /* Non-fatal */ }
-
       const token = await createSession(newUser.id, authUser.email!);
       const response = NextResponse.redirect(
         new URL("/dashboard?confirmed=true", origin)
@@ -130,14 +121,6 @@ export async function GET(request: NextRequest) {
       .maybeSingle();
 
     if (existingUser) {
-      // Award signup bonus (idempotent check inside)
-      try {
-        await awardSignupBonus(supabase, existingUser.id);
-      } catch {
-        // Non-fatal
-      }
-
-      // Create session and redirect
       const token = await createSession(existingUser.id, existingUser.email);
       const response = NextResponse.redirect(
         new URL("/dashboard?confirmed=true", origin)
@@ -180,12 +163,6 @@ export async function GET(request: NextRequest) {
       best_pnl: 0,
       total_trades: 0,
     });
-
-    try {
-      await awardSignupBonus(supabase, newUser.id);
-    } catch {
-      // Non-fatal
-    }
 
     const token = await createSession(newUser.id, authUser.email!);
     const response = NextResponse.redirect(

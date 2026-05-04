@@ -2,6 +2,7 @@ import { NextResponse, NextRequest } from "next/server";
 import { z } from "zod";
 import { createServiceClient, createServerClient } from "@/lib/supabase-server";
 import { rateLimit } from "@/lib/rate-limit";
+import { awardSignupBonus } from "@/lib/points";
 
 const SignupSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -131,6 +132,13 @@ export async function POST(request: NextRequest) {
       best_pnl: 0,
       total_trades: 0,
     });
+
+    // Award 100 CP signup bonus immediately
+    try {
+      await awardSignupBonus(serviceClient, user.id);
+    } catch {
+      // Non-fatal — user still gets created
+    }
 
     // Don't create session yet — user must confirm email first
     return NextResponse.json({
