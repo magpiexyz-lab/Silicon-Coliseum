@@ -1,6 +1,6 @@
 import { NextResponse, NextRequest } from "next/server";
 import { z } from "zod";
-import { createServiceClient } from "@/lib/supabase-server";
+import { createServiceClient, createServerClient } from "@/lib/supabase-server";
 import { rateLimit } from "@/lib/rate-limit";
 
 const SignupSchema = z.object({
@@ -43,10 +43,10 @@ export async function POST(request: NextRequest) {
 
     const { email, username, password } = parsed.data;
 
-    const supabase = createServiceClient();
+    const serviceClient = createServiceClient();
 
     // Check if username is taken
-    const { data: existingUsername } = await supabase
+    const { data: existingUsername } = await serviceClient
       .from("users")
       .select("id")
       .eq("username", username)
@@ -59,8 +59,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if email already exists in auth
-    const { data: existingEmail } = await supabase
+    // Check if email already exists
+    const { data: existingEmail } = await serviceClient
       .from("users")
       .select("id")
       .eq("email", email)
@@ -73,15 +73,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create user with Supabase Auth — email confirmation required
-    // Supabase will send a confirmation email automatically
-    const { data: authData, error: authError } =
-      await supabase.auth.admin.createUser({
-        email,
-        password,
-        email_confirm: false,
-        user_metadata: { username },
-      });
+    // Use standard signUp() — this triggers Supabase's built-in confirmation email
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || request.nextUrl.origin;
+    const anonClient = createServerClient();
+    const { data: authData, error: authError } = await anonClient.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { username },
+        emailRedirectTo: `${siteUrl}/api/auth/confirm`,
+      },
+    });
 
     if (authError) {
       return NextResponse.json(
@@ -100,7 +102,7 @@ export async function POST(request: NextRequest) {
     const authId = authData.user.id;
 
     // Insert into users table (but user cannot login until email confirmed)
-    const { data: user, error: insertError } = await supabase
+    const { data: user, error: insertError } = await serviceClient
       .from("users")
       .insert({
         email,
@@ -121,25 +123,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Create user_profiles entry
-    await supabase.from("user_profiles").insert({
+    await serviceClient.from("user_profiles").insert({
       user_id: user.id,
       total_arenas: 0,
       wins: 0,
       top3_finishes: 0,
       best_pnl: 0,
       total_trades: 0,
-    });
-
-    // Send confirmation email via Supabase Auth
-    // generateLink creates a magic link for email confirmation
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || request.nextUrl.origin;
-    await supabase.auth.admin.generateLink({
-      type: "signup",
-      email,
-      password,
-      options: {
-        redirectTo: `${siteUrl}/api/auth/confirm`,
-      },
     });
 
     // Don't create session yet — user must confirm email first
