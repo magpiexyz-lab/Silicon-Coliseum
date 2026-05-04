@@ -61,7 +61,8 @@ import {
 import RiskLevelBadge from "@/components/risk-level-badge";
 import AgentAvatar from "@/components/agent-avatar";
 import { SolBetPanel } from "@/components/sol-bet-panel";
-import { ArenaChat } from "@/components/arena-chat";
+import { ArenaChat, getAgentColor, getAgentEmoji, getAgentBgColor } from "@/components/arena-chat";
+import { useArenaComments } from "@/hooks/use-arena-comments";
 import type { RiskLevel } from "@/lib/types";
 
 import { statusColors } from "@/lib/status-colors";
@@ -735,6 +736,12 @@ export default function ArenaDetailPage() {
   const [expandedReasoning, setExpandedReasoning] = useState<string | null>(null);
   const [myBets, setMyBets] = useState<MyBet[]>([]);
 
+  // Shared comments hook for both chat and speech bubbles
+  const { messages: chatMessages, latestByAgent } = useArenaComments(
+    arenaId,
+    arena?.status === "active"
+  );
+
   const fetchData = useCallback(async () => {
     if (!arenaId) return;
     setLoading(true);
@@ -1046,6 +1053,7 @@ export default function ArenaDetailPage() {
                         {leaderboard.map((entry) => {
                           const isExpanded = expandedAgent === entry.agentId;
                           const detail = agentDetails[entry.agentId];
+                          const latestComment = latestByAgent.get(entry.agentName);
                           return (
                             <>
                               <TableRow
@@ -1068,7 +1076,17 @@ export default function ArenaDetailPage() {
                                 <TableCell>
                                   <div className="flex items-center gap-2">
                                     <AgentAvatar name={entry.agentName} size="sm" />
-                                    <span className="font-bold">{entry.agentName}</span>
+                                    <div className="min-w-0">
+                                      <span className="font-bold block">{entry.agentName}</span>
+                                      {latestComment && (
+                                        <div
+                                          className={`mt-1 px-2 py-1 rounded-lg border text-[11px] leading-tight max-w-[200px] sm:max-w-[280px] truncate ${getAgentBgColor(entry.agentName)}`}
+                                        >
+                                          <span className="mr-1">{getAgentEmoji(entry.agentName)}</span>
+                                          <span className="text-foreground/80 italic">{latestComment.message}</span>
+                                        </div>
+                                      )}
+                                    </div>
                                   </div>
                                 </TableCell>
                                 <TableCell className="text-muted-foreground hidden sm:table-cell">
@@ -1233,7 +1251,7 @@ export default function ArenaDetailPage() {
               <Card className="neon-card overflow-hidden">
                 <div className="h-[400px]">
                   <ArenaChat
-                    arenaId={arenaId}
+                    messages={chatMessages}
                     isActive={arena.status === "active"}
                   />
                 </div>

@@ -198,6 +198,9 @@ Write a conversation of EXACTLY 60 lines between these agents. The conversation 
 - Mix topics: market commentary, roasting rivals, bragging about wins, making excuses for losses
 - Keep each message SHORT (1-2 sentences max, like a group chat)
 - Each agent should appear roughly equally (not the same agent multiple times in a row)
+- USE LOTS OF EMOJIS in every message! Each message should have 1-3 relevant emojis (fire, rocket, skull, crown, clown, money, chart, muscle, cry-laugh, etc.)
+- Add cute/funny expressions like "no cap", "fr fr", "lowkey", "ngl", "its giving", "cope harder", "slay", "gg", "rekt", "skill issue" mixed with each character's style
+- Make it feel like a chaotic group chat with reactions, roasts, and hype
 
 Format each line EXACTLY as:
 AGENT_NAME: message text here
@@ -224,7 +227,7 @@ Start the conversation now. 60 lines total.`;
         messages: [
           {
             role: "user",
-            content: `Write 60 lines of funny trash-talk between trading AI agents named: ${agentNames.join(", ")}. Each line should be "AGENT_NAME: short message". Keep it entertaining, in-character, and reference a trading competition called "${arenaName}".${standingsContext}`,
+            content: `Write 60 lines of funny trash-talk between trading AI agents named: ${agentNames.join(", ")}. Each line should be "AGENT_NAME: short message". Keep it entertaining, in-character, and reference a trading competition called "${arenaName}". USE LOTS OF EMOJIS in every message! Make it feel like a chaotic group chat with roasts and hype.${standingsContext}`,
           },
         ],
         max_tokens: 4000,

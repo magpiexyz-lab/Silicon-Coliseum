@@ -68,6 +68,24 @@ export async function POST(
 
     const supabase = createServiceClient();
 
+    // Check betting phase
+    const { data: arenaData } = await supabase
+      .from("arenas")
+      .select("betting_phase_end")
+      .eq("id", arenaId)
+      .single();
+
+    if (arenaData?.betting_phase_end) {
+      const now = new Date();
+      const bettingEnd = new Date(arenaData.betting_phase_end);
+      if (now > bettingEnd) {
+        return NextResponse.json(
+          { error: "Betting phase has ended for this arena" },
+          { status: 400 }
+        );
+      }
+    }
+
     // Resolve internal userId
     let userId = session.userId;
     const { data: user } = await supabase

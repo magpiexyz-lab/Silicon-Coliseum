@@ -1,19 +1,13 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageSquare, Volume2, VolumeX } from "lucide-react";
+import { MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-interface ChatMessage {
-  id: string;
-  agent_name: string;
-  message: string;
-  display_at: string;
-}
+import type { ChatMessage } from "@/hooks/use-arena-comments";
 
 // Agent color palette — each agent gets a consistent color
-const AGENT_COLORS: Record<string, string> = {
+export const AGENT_COLORS: Record<string, string> = {
   "Warren Buffett": "text-amber-400",
   "Elon Musk": "text-blue-400",
   "Albert Einstein": "text-emerald-400",
@@ -46,7 +40,41 @@ const AGENT_COLORS: Record<string, string> = {
   "Captain Jack Sparrow": "text-amber-500",
 };
 
-const AGENT_EMOJIS: Record<string, string> = {
+// Also export for speech bubbles
+export const AGENT_BG_COLORS: Record<string, string> = {
+  "Warren Buffett": "bg-amber-500/15 border-amber-500/30",
+  "Elon Musk": "bg-blue-500/15 border-blue-500/30",
+  "Albert Einstein": "bg-emerald-500/15 border-emerald-500/30",
+  "Kratos": "bg-red-500/15 border-red-500/30",
+  "The Rock": "bg-yellow-500/15 border-yellow-500/30",
+  "Naruto Uzumaki": "bg-orange-500/15 border-orange-500/30",
+  "Naruto": "bg-orange-500/15 border-orange-500/30",
+  "Tony Stark": "bg-red-400/15 border-red-400/30",
+  "Gordon Gekko": "bg-green-500/15 border-green-500/30",
+  "Hermione Granger": "bg-purple-500/15 border-purple-500/30",
+  "Thanos": "bg-violet-500/15 border-violet-500/30",
+  "Michael Scott": "bg-sky-400/15 border-sky-400/30",
+  "Sherlock Holmes": "bg-teal-500/15 border-teal-500/30",
+  "Mark Zuckerberg": "bg-blue-400/15 border-blue-400/30",
+  "Goku": "bg-yellow-500/15 border-yellow-500/30",
+  "Brock Lesnar": "bg-rose-500/15 border-rose-500/30",
+  "Tim Cook": "bg-gray-400/15 border-gray-400/30",
+  "Mr. Beast": "bg-fuchsia-500/15 border-fuchsia-500/30",
+  "Taylor Swift": "bg-pink-500/15 border-pink-500/30",
+  "Kanye West": "bg-amber-400/15 border-amber-400/30",
+  "Jeff Bezos": "bg-cyan-500/15 border-cyan-500/30",
+  "Snoop Dogg": "bg-lime-500/15 border-lime-500/30",
+  "Oprah Winfrey": "bg-pink-400/15 border-pink-400/30",
+  "Deadpool": "bg-red-600/15 border-red-600/30",
+  "Bill Gates": "bg-indigo-500/15 border-indigo-500/30",
+  "Cristiano Ronaldo": "bg-green-400/15 border-green-400/30",
+  "Rihanna": "bg-rose-400/15 border-rose-400/30",
+  "The Joker": "bg-emerald-400/15 border-emerald-400/30",
+  "Lionel Messi": "bg-sky-500/15 border-sky-500/30",
+  "Captain Jack Sparrow": "bg-amber-600/15 border-amber-600/30",
+};
+
+export const AGENT_EMOJIS: Record<string, string> = {
   "Warren Buffett": "🧓",
   "Elon Musk": "🚀",
   "Albert Einstein": "🧠",
@@ -79,7 +107,6 @@ const AGENT_EMOJIS: Record<string, string> = {
   "Captain Jack Sparrow": "🏴‍☠️",
 };
 
-// Fallback colors for agents not in the list
 const FALLBACK_COLORS = [
   "text-cyan-400",
   "text-pink-400",
@@ -88,7 +115,7 @@ const FALLBACK_COLORS = [
   "text-rose-400",
 ];
 
-function getAgentColor(name: string): string {
+export function getAgentColor(name: string): string {
   return (
     AGENT_COLORS[name] ||
     FALLBACK_COLORS[
@@ -98,8 +125,12 @@ function getAgentColor(name: string): string {
   );
 }
 
-function getAgentEmoji(name: string): string {
+export function getAgentEmoji(name: string): string {
   return AGENT_EMOJIS[name] || "🤖";
+}
+
+export function getAgentBgColor(name: string): string {
+  return AGENT_BG_COLORS[name] || "bg-muted/30 border-border/30";
 }
 
 function timeAgo(dateStr: string): string {
@@ -110,63 +141,15 @@ function timeAgo(dateStr: string): string {
 }
 
 interface ArenaChatProps {
-  arenaId: string;
+  messages: ChatMessage[];
   isActive: boolean;
 }
 
-export function ArenaChat({ arenaId, isActive }: ArenaChatProps) {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+export function ArenaChat({ messages, isActive }: ArenaChatProps) {
   const [autoScroll, setAutoScroll] = useState(true);
   const chatRef = useRef<HTMLDivElement>(null);
-  const lastDisplayAt = useRef<string | null>(null);
 
-  const fetchComments = useCallback(async () => {
-    try {
-      const url = lastDisplayAt.current
-        ? `/api/arenas/${arenaId}/comments?after=${encodeURIComponent(lastDisplayAt.current)}&limit=60`
-        : `/api/arenas/${arenaId}/comments?limit=60`;
-
-      const res = await fetch(url);
-      if (!res.ok) return;
-
-      const data = await res.json();
-      const newComments: ChatMessage[] = data.comments || [];
-
-      if (newComments.length > 0) {
-        setMessages((prev) => {
-          const existingIds = new Set(prev.map((m) => m.id));
-          const filtered = newComments.filter((m) => !existingIds.has(m.id));
-          if (filtered.length === 0) return prev;
-          const merged = [...prev, ...filtered];
-          // Keep last 100 messages to prevent memory bloat
-          return merged.slice(-100);
-        });
-
-        const latest = newComments[newComments.length - 1];
-        if (latest) {
-          lastDisplayAt.current = latest.display_at;
-        }
-      }
-    } catch {
-      // Silently fail — chat is non-critical
-    }
-  }, [arenaId]);
-
-  // Initial fetch
-  useEffect(() => {
-    lastDisplayAt.current = null;
-    setMessages([]);
-    fetchComments();
-  }, [fetchComments]);
-
-  // Poll for new messages every 15 seconds (comments appear every 30s, so poll at 15s catches them quickly)
-  useEffect(() => {
-    if (!isActive) return;
-    const interval = setInterval(fetchComments, 15000);
-    return () => clearInterval(interval);
-  }, [fetchComments, isActive]);
-
-  // Auto-scroll to bottom
+  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     if (autoScroll && chatRef.current) {
       chatRef.current.scrollTop = chatRef.current.scrollHeight;
@@ -176,7 +159,6 @@ export function ArenaChat({ arenaId, isActive }: ArenaChatProps) {
   function handleScroll() {
     if (!chatRef.current) return;
     const { scrollTop, scrollHeight, clientHeight } = chatRef.current;
-    // If user scrolled up more than 100px from bottom, disable auto-scroll
     setAutoScroll(scrollHeight - scrollTop - clientHeight < 100);
   }
 
