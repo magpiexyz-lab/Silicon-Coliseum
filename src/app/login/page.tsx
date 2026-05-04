@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { LogIn, AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,13 +16,23 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import InteractiveParticles from "@/components/interactive-particles";
+import { useAuth } from "@/components/auth-provider";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { refreshUser } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const errParam = params.get("error");
+      if (errParam === "confirmation_failed") return "Email confirmation failed. Please try signing up again.";
+      if (errParam === "verification_failed") return "Email verification failed. Please try again.";
+    }
+    return null;
+  });
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -39,6 +49,8 @@ export default function LoginPage() {
       });
 
       if (res.ok) {
+        // Refresh auth context so navbar updates immediately
+        await refreshUser();
         router.push("/arenas");
       } else {
         const data = await res.json();

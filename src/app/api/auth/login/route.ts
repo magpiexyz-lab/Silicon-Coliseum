@@ -46,6 +46,13 @@ export async function POST(request: NextRequest) {
       });
 
     if (authError) {
+      // Check if it's an unconfirmed email error
+      if (authError.message.includes("Email not confirmed")) {
+        return NextResponse.json(
+          { error: "Please confirm your email before logging in. Check your inbox." },
+          { status: 403 }
+        );
+      }
       return NextResponse.json(
         { error: "Invalid email or password" },
         { status: 401 }

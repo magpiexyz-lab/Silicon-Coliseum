@@ -214,6 +214,36 @@
   text-shadow: 0 0 10px oklch(0.78 0.22 145 / 0.5), 0 0 30px oklch(0.78 0.22 145 / 0.2);
 }
 
+.light .neon-pink,
+.light .neon-cyan,
+.light .neon-green {
+  text-shadow: none;
+}
+
+.light .shimmer-text {
+  background: linear-gradient(
+    90deg,
+    oklch(0.45 0.25 320) 0%,
+    oklch(0.5 0.2 195) 20%,
+    oklch(0.55 0.18 95) 40%,
+    oklch(0.48 0.22 145) 60%,
+    oklch(0.45 0.25 320) 80%,
+    oklch(0.5 0.2 195) 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 4s linear infinite;
+}
+
+.light .gradient-text {
+  background: linear-gradient(135deg, oklch(0.45 0.25 320), oklch(0.5 0.2 195), oklch(0.55 0.18 95));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
 .neon-border {
   border: 1px solid oklch(0.75 0.28 340 / 0.4);
   box-shadow: 0 0 15px oklch(0.75 0.28 340 / 0.15), inset 0 0 15px oklch(0.75 0.28 340 / 0.05);
@@ -228,6 +258,17 @@
 .neon-card:hover {
   border-color: oklch(0.8 0.18 195 / 0.5);
   box-shadow: 0 4px 40px oklch(0.8 0.18 195 / 0.2), 0 0 80px oklch(0.75 0.28 340 / 0.08);
+  transform: translateY(-4px) scale(1.01);
+}
+
+.light .neon-card {
+  background: linear-gradient(135deg, oklch(0.99 0.005 300 / 0.95), oklch(0.97 0.01 280 / 0.95));
+  border: 1px solid oklch(0.55 0.2 320 / 0.2);
+  box-shadow: 0 4px 20px oklch(0.55 0.2 320 / 0.08);
+}
+.light .neon-card:hover {
+  border-color: oklch(0.55 0.2 320 / 0.4);
+  box-shadow: 0 4px 30px oklch(0.55 0.2 320 / 0.15);
   transform: translateY(-4px) scale(1.01);
 }
 
@@ -400,6 +441,17 @@
 }
 ::-webkit-scrollbar-thumb:hover {
   background: oklch(0.55 0.15 320);
+}
+
+.light ::-webkit-scrollbar-thumb {
+  background: oklch(0.7 0.06 320);
+}
+.light ::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.55 0.1 320);
+}
+
+.light .grain {
+  opacity: 0.015;
 }
 
 /* -- Reduced Motion -- */

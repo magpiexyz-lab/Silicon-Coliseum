@@ -32,9 +32,13 @@ export async function GET(request: NextRequest) {
 
     const supabase = createServiceClient();
 
+    // Exclude deprecated tokens (BLOT, MAGIC)
+    const EXCLUDED_TOKENS = ["BLOT", "MAGIC"];
+
     const { data: tokens, error } = await supabase
       .from("platform_tokens")
       .select("*")
+      .not("symbol", "in", `(${EXCLUDED_TOKENS.join(",")})`)
       .order("created_at", { ascending: true });
 
     if (error) {

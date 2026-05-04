@@ -1,8 +1,6 @@
 import { NextResponse, NextRequest } from "next/server";
 import { z } from "zod";
 import { createServiceClient } from "@/lib/supabase-server";
-import { createSession, setSessionCookie } from "@/lib/auth";
-import { awardSignupBonus } from "@/lib/points";
 import { rateLimit } from "@/lib/rate-limit";
 
 const SignupSchema = z.object({
@@ -61,12 +59,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create user with Supabase Auth (admin API to skip email confirmation)
+    // Check if email already exists in auth
+    const { data: existingEmail } = await supabase
+      .from("users")
+      .select("id")
+      .eq("email", email)
+      .maybeSingle();
+
+    if (existingEmail) {
+      return NextResponse.json(
+        { error: "An account with this email already exists" },
+        { status: 409 }
+      );
+    }
+
+    // Create user with Supabase Auth — email confirmation required
+    // Supabase will send a confirmation email automatically
     const { data: authData, error: authError } =
       await supabase.auth.admin.createUser({
         email,
         password,
-        email_confirm: true,
+        email_confirm: false,
+        user_metadata: { username },
       });
 
     if (authError) {
@@ -85,7 +99,7 @@ export async function POST(request: NextRequest) {
 
     const authId = authData.user.id;
 
-    // Insert into users table
+    // Insert into users table (but user cannot login until email confirmed)
     const { data: user, error: insertError } = await supabase
       .from("users")
       .insert({
@@ -116,36 +130,24 @@ export async function POST(request: NextRequest) {
       total_trades: 0,
     });
 
-    // Award 100 CP signup bonus
-    try {
-      await awardSignupBonus(supabase, user.id);
-    } catch {
-      // Non-fatal: user created but bonus failed
-    }
-
-    // Re-fetch user to get updated cp_balance
-    const { data: updatedUser } = await supabase
-      .from("users")
-      .select("*")
-      .eq("id", user.id)
-      .single();
-
-    // Create JWT session
-    const token = await createSession(user.id, email);
-
-    const response = NextResponse.json({
-      success: true,
-      user: {
-        id: updatedUser?.id || user.id,
-        email: updatedUser?.email || email,
-        username: updatedUser?.username || username,
-        cpBalance: updatedUser?.cp_balance ?? 0,
-        isAdmin: updatedUser?.is_admin ?? false,
+    // Send confirmation email via Supabase Auth
+    // generateLink creates a magic link for email confirmation
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || request.nextUrl.origin;
+    await supabase.auth.admin.generateLink({
+      type: "signup",
+      email,
+      password,
+      options: {
+        redirectTo: `${siteUrl}/api/auth/confirm`,
       },
     });
-    setSessionCookie(response, token);
 
-    return response;
+    // Don't create session yet — user must confirm email first
+    return NextResponse.json({
+      success: true,
+      needsConfirmation: true,
+      message: "Check your email to confirm your account",
+    });
   } catch (error) {
     console.error("Signup error:", error);
     return NextResponse.json(

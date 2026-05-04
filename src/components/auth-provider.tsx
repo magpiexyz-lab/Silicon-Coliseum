@@ -8,6 +8,7 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
+import { identifyUser, resetAnalytics } from "@/lib/analytics";
 
 interface AuthUser {
   id: string;
@@ -72,6 +73,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = await res.json();
       if (data.user) {
         setUser(data.user);
+        // Identify user in PostHog
+        identifyUser(data.user.id, {
+          email: data.user.email,
+          username: data.user.username,
+        });
       } else {
         setUser(null);
       }
@@ -101,6 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // ignore
     }
     setUser(null);
+    resetAnalytics();
     window.location.href = "/";
   }, []);
 

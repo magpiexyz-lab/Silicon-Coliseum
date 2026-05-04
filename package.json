@@ -40,6 +40,8 @@
     "lucide-react": "latest",
     "next": "^15",
     "openai": "latest",
+    "posthog-js": "^1.372.6",
+    "posthog-node": "^5.33.0",
     "react": "^19",
     "react-dom": "^19",
     "supabase": "^2.91.1",
