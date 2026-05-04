@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
+import { Suspense } from "react";
 import { AuthProvider } from "@/components/auth-provider";
 import { WalletProvider } from "@/components/wallet-provider";
+import { PostHogProvider } from "@/components/posthog-provider";
 import { Navbar } from "@/components/navbar";
 import "./globals.css";
 
@@ -51,8 +53,12 @@ export default function RootLayout({
       >
         <WalletProvider>
           <AuthProvider>
-            <Navbar />
-            <main className="pt-14">{children}</main>
+            <Suspense fallback={null}>
+              <PostHogProvider>
+                <Navbar />
+                <main className="pt-14">{children}</main>
+              </PostHogProvider>
+            </Suspense>
           </AuthProvider>
         </WalletProvider>
         <div className="grain" aria-hidden="true" />

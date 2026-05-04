@@ -70,11 +70,13 @@ export async function POST(request: NextRequest) {
     }
     const baseTokenId = baseToken.id;
 
-    // Get all Silicon tokens
+    // Get all Silicon tokens (excluding deprecated ones)
+    const EXCLUDED_TOKENS = ["BLOT", "MAGIC"];
     const { data: tokens } = await supabase
       .from("platform_tokens")
       .select("id, symbol")
-      .eq("is_base_currency", false);
+      .eq("is_base_currency", false)
+      .not("symbol", "in", `(${EXCLUDED_TOKENS.join(",")})`);
 
     if (!tokens || tokens.length === 0) {
       return NextResponse.json(
@@ -157,14 +159,18 @@ export async function POST(request: NextRequest) {
       log.push(`Created pool: ${token.symbol}/vUSD @ $${targetPrice.toFixed(2)}`);
     }
 
-    // Get all celebrity agents (owned by system user)
+    // Get all celebrity agents (owned by system user) and pick random 20
     const { data: agents } = await supabase
       .from("agents")
       .select("id, name")
       .eq("user_id", systemUser.id);
 
     if (agents && agents.length > 0) {
-      for (const agent of agents) {
+      // Shuffle and pick up to 20
+      const shuffled = [...agents].sort(() => Math.random() - 0.5);
+      const selected = shuffled.slice(0, 20);
+
+      for (const agent of selected) {
         const { error: entryError } = await supabase.from("arena_entries").insert({
           arena_id: newArena.id,
           agent_id: agent.id,
@@ -177,6 +183,7 @@ export async function POST(request: NextRequest) {
           log.push(`Entered "${agent.name}" into arena`);
         }
       }
+      log.push(`Selected ${selected.length} of ${agents.length} agents for this arena`);
     } else {
       log.push("WARNING: No celebrity agents found in agents table");
     }

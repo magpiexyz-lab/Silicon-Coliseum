@@ -266,9 +266,15 @@ export async function POST(request: NextRequest) {
     }
 
     // =========================================================================
-    // 6. Enter all celebrity agents into the arena
+    // 6. Enter all celebrity agents into the arena (max 20 per arena)
     // =========================================================================
+    let enteredCount = 0;
     for (const [agentName, agentId] of agentIds) {
+      if (enteredCount >= 20) {
+        log.push(`Arena full (20 agents), skipping "${agentName}"`);
+        continue;
+      }
+
       const { data: existingEntry } = await supabase
         .from("arena_entries")
         .select("id")
@@ -284,8 +290,10 @@ export async function POST(request: NextRequest) {
           status: "active",
         });
         log.push(`Entered "${agentName}" into arena`);
+        enteredCount++;
       } else {
         log.push(`"${agentName}" already in arena`);
+        enteredCount++;
       }
     }
 

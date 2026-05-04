@@ -7,7 +7,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { SOLANA_RPC_URL, MIN_BET_LAMPORTS } from "@/lib/solana/constants";
 
 const VerifyBetSchema = z.object({
-  txSignature: z.string().min(80).max(100),
+  txSignature: z.string().min(43).max(100),
   walletAddress: z.string().min(32).max(50),
   arenaId: z.string().uuid(),
   agentId: z.string().uuid(),
@@ -123,8 +123,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check minimum bet
-    if (BigInt(solAmount) < MIN_BET_LAMPORTS) {
+    // Check minimum bet (solAmount is in lamports as a number)
+    if (solAmount < Number(MIN_BET_LAMPORTS)) {
       return NextResponse.json(
         { error: "Bet amount below minimum (0.01 SOL)" },
         { status: 400 }

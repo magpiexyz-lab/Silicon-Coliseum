@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  UserPlus,
   AlertCircle,
   Loader2,
   CheckCircle2,
@@ -59,7 +58,7 @@ export default function SignupPage() {
 
       if (res.ok) {
         setSuccess(true);
-        setShowClaimDialog(true);
+        // Don't show claim dialog — user needs to confirm email first
       } else {
         setError(data.error || "Registration failed. Please try again.");
       }
@@ -79,7 +78,7 @@ export default function SignupPage() {
         open={showClaimDialog}
         onOpenChange={(open) => {
           setShowClaimDialog(open);
-          if (!open) router.push("/dashboard");
+          if (!open) router.push("/login");
         }}
       />
 
@@ -101,11 +100,11 @@ export default function SignupPage() {
             </motion.div>
             <div>
               <CardTitle className="text-2xl font-black">
-                {success ? "You're in! Let's GOOOO!" : "Join The Chaos"}
+                {success ? "Check Your Email!" : "Join The Chaos"}
               </CardTitle>
               <CardDescription className="mt-2">
                 {success
-                  ? "Redirecting to your dashboard..."
+                  ? `We sent a confirmation link to ${email}. Click it to activate your account.`
                   : "30 seconds. No wallet. No crypto knowledge. Just vibes."}
               </CardDescription>
             </div>
@@ -117,9 +116,15 @@ export default function SignupPage() {
                 key="success"
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="px-6 pb-6 flex justify-center"
+                className="px-6 pb-6 text-center space-y-3"
               >
-                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                <CheckCircle2 className="w-8 h-8 text-primary mx-auto" />
+                <p className="text-sm text-muted-foreground">
+                  Didn&apos;t get the email? Check your spam folder, or{" "}
+                  <Link href="/login" className="text-primary hover:underline">
+                    try logging in
+                  </Link>.
+                </p>
               </motion.div>
             ) : (
               <motion.div key="form">
