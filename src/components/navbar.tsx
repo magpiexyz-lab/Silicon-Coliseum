@@ -101,13 +101,14 @@ export function Navbar() {
 
             {/* Right side */}
             <div className="flex items-center gap-2 ml-auto">
-              {/* CP Balance + Buy */}
-              <div className="hidden sm:flex items-center gap-1 px-3 py-1.5 rounded-full glass text-sm font-medium">
+              {/* CP Balance + Buy — always visible */}
+              <div className="flex items-center gap-1 px-2 sm:px-3 py-1.5 rounded-full glass text-sm font-medium">
                 <Coins className="w-3.5 h-3.5 text-primary" />
-                <span>{cpBalance.toLocaleString()} CP</span>
+                <span className="tabular-nums">{cpBalance.toLocaleString()}</span>
+                <span className="hidden sm:inline">CP</span>
                 <button
                   onClick={() => setBuyCpOpen(true)}
-                  className="ml-1 p-0.5 rounded-full hover:bg-primary/20 transition-colors"
+                  className="ml-0.5 p-0.5 rounded-full hover:bg-primary/20 transition-colors"
                   title="Buy CP with SOL"
                 >
                   <Plus className="w-3 h-3 text-primary" />
@@ -135,10 +136,6 @@ export function Navbar() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem className="sm:hidden">
-                    <Coins className="w-3.5 h-3.5 mr-2 text-primary" />
-                    {cpBalance.toLocaleString()} CP
-                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={logout}>
                     <LogOut className="w-3.5 h-3.5 mr-2" />
                     Logout

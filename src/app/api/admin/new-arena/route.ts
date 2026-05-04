@@ -1,6 +1,11 @@
 import { NextResponse, NextRequest } from "next/server";
 import { createServiceClient } from "@/lib/supabase-server";
 import { getAllPrices, calculateReservesForPrice } from "@/lib/price-feed";
+import { isAdminKeyConfigured, sendAdminTransaction } from "@/lib/solana/admin";
+import { createArenaEscrowInstruction } from "@/lib/solana/program";
+import { getAdminKeypair } from "@/lib/solana/admin";
+import { getArenaEscrowPDA } from "@/lib/solana/utils";
+import { getServerConnection } from "@/lib/solana/admin";
 
 /**
  * POST /api/admin/new-arena
@@ -131,6 +136,43 @@ export async function POST(request: NextRequest) {
     }
 
     log.push(`Created arena: "${arenaName}" (${durationDays} days)`);
+
+    // Create on-chain arena escrow for SOL bets
+    if (
+      (betType === "sol_only" || betType === "both") &&
+      isAdminKeyConfigured()
+    ) {
+      try {
+        const admin = getAdminKeypair();
+        const [escrowPDA] = getArenaEscrowPDA(newArena.id);
+
+        // Check if escrow already exists (idempotent)
+        const conn = getServerConnection();
+        const existing = await conn.getAccountInfo(escrowPDA);
+        if (existing) {
+          log.push(`Arena escrow already exists on-chain: ${escrowPDA.toBase58()}`);
+        } else {
+          const ix = await createArenaEscrowInstruction(
+            admin.publicKey,
+            newArena.id
+          );
+          const sig = await sendAdminTransaction(ix);
+          log.push(
+            `Created on-chain arena escrow: ${escrowPDA.toBase58()} (tx: ${sig})`
+          );
+        }
+      } catch (escrowErr) {
+        const msg =
+          escrowErr instanceof Error ? escrowErr.message : "unknown error";
+        log.push(`WARNING: Failed to create on-chain escrow: ${msg}`);
+        console.error("Failed to create arena escrow on-chain:", escrowErr);
+        // Non-fatal: arena still works for CP bets, SOL bets will fail
+      }
+    } else if (betType === "sol_only" || betType === "both") {
+      log.push(
+        "WARNING: SOLANA_ADMIN_PRIVATE_KEY not configured — skipped on-chain escrow creation. SOL bets will not work."
+      );
+    }
 
     // Create pools with real prices
     const prices = await getAllPrices();

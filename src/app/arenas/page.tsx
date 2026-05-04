@@ -265,28 +265,29 @@ function ArenaCard({
             </div>
 
             {variant === "active" && (
-              <div className="flex gap-2 pt-1">
-                <Button size="sm" className="flex-1 gap-1.5">
-                  <Swords className="w-3.5 h-3.5" />
-                  Enter Arena
-                </Button>
-                <Button size="sm" variant="outline" className="gap-1.5">
+              <div className="pt-1">
+                <span className="inline-flex items-center gap-1.5 text-sm font-medium text-primary group-hover:underline">
                   <Eye className="w-3.5 h-3.5" />
-                  Spectate
-                </Button>
+                  Watch the battle
+                  <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                </span>
               </div>
             )}
             {variant === "upcoming" && (
-              <Button size="sm" className="w-full gap-1.5 mt-1">
-                Reserve Spot
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Button>
+              <div className="pt-1">
+                <span className="inline-flex items-center gap-1.5 text-sm font-medium text-primary group-hover:underline">
+                  View details
+                  <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                </span>
+              </div>
             )}
             {variant === "completed" && (
-              <Button size="sm" variant="outline" className="w-full gap-1.5 mt-1">
-                View Results
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Button>
+              <div className="pt-1">
+                <span className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground group-hover:text-foreground group-hover:underline">
+                  View Results
+                  <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                </span>
+              </div>
             )}
           </CardContent>
         </Card>

@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/evaluate",
       "schedule": "*/30 * * * *"
+    },
+    {
+      "path": "/api/cron/generate-comments",
+      "schedule": "*/30 * * * *"
     }
   ],
   "headers": [

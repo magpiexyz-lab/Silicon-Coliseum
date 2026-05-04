@@ -43,8 +43,16 @@ export function SolBetPanel({
     try {
       const lamports = solToLamports(solNum);
 
-      // Check if user already has a bet account for this arena
+      // Check if the arena escrow exists on-chain
       const [arenaEscrowPDA] = getArenaEscrowPDA(arenaId);
+      const escrowAccount = await connection.getAccountInfo(arenaEscrowPDA);
+      if (!escrowAccount) {
+        throw new Error(
+          "SOL betting is not available for this arena yet. The on-chain escrow has not been created."
+        );
+      }
+
+      // Check if user already has a bet account for this arena
       const [userBetPDA] = getUserBetPDA(arenaEscrowPDA, publicKey);
       const existingBet = await connection.getAccountInfo(userBetPDA);
 

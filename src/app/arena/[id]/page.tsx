@@ -61,6 +61,7 @@ import {
 import RiskLevelBadge from "@/components/risk-level-badge";
 import AgentAvatar from "@/components/agent-avatar";
 import { SolBetPanel } from "@/components/sol-bet-panel";
+import { ArenaChat } from "@/components/arena-chat";
 import type { RiskLevel } from "@/lib/types";
 
 import { statusColors } from "@/lib/status-colors";
@@ -213,6 +214,7 @@ function EnterArenaDialog({ arenaId }: { arenaId: string }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [cpBalance, setCpBalance] = useState<number | null>(null);
 
   async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -259,7 +261,19 @@ function EnterArenaDialog({ arenaId }: { arenaId: string }) {
         setLoadingAgents(false);
       }
     }
+    async function fetchCpBalance() {
+      try {
+        const res = await fetch("/api/user/points");
+        if (res.ok) {
+          const data = await res.json();
+          setCpBalance(data.cpBalance ?? data.cp_balance ?? null);
+        }
+      } catch {
+        // ignore
+      }
+    }
     fetchAgents();
+    fetchCpBalance();
   }, []);
 
   async function handleSubmit() {
@@ -313,8 +327,33 @@ function EnterArenaDialog({ arenaId }: { arenaId: string }) {
     );
   }
 
+  const DEPLOY_COST = 10000;
+  const canAfford = cpBalance !== null && cpBalance >= DEPLOY_COST;
+
   return (
     <div className="space-y-4">
+      {/* CP balance and cost info */}
+      <div className="flex items-center justify-between p-3 rounded-lg glass text-sm">
+        <div className="flex items-center gap-1.5">
+          <Coins className="w-4 h-4 text-primary" />
+          <span className="text-muted-foreground">Your CP:</span>
+          <span className="font-bold">
+            {cpBalance !== null ? cpBalance.toLocaleString() : "..."}
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="text-muted-foreground">Cost:</span>
+          <span className={`font-bold ${canAfford === false ? "text-destructive" : "text-primary"}`}>
+            {DEPLOY_COST.toLocaleString()} CP
+          </span>
+        </div>
+      </div>
+      {canAfford === false && (
+        <p className="text-xs text-destructive text-center">
+          Not enough CP to deploy an agent. Earn more by betting or purchasing with SOL.
+        </p>
+      )}
+
       <div className="flex gap-2 flex-wrap">
         {availableAgents.length > 0 && (
           <Button
@@ -597,6 +636,36 @@ function PlaceBetDialog({
           </SelectContent>
         </Select>
       </div>
+
+      {/* Selected agent stats */}
+      {selectedAgent && (() => {
+        const agent = agents.find((a) => a.agentId === selectedAgent);
+        if (!agent) return null;
+        return (
+          <div className="p-3 rounded-lg glass text-sm space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Rank</span>
+              <span className="font-bold">
+                {agent.rank === 1 ? "1st" : agent.rank === 2 ? "2nd" : agent.rank === 3 ? "3rd" : `#${agent.rank}`}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Portfolio</span>
+              <span className="font-mono font-bold">${agent.totalValue.toLocaleString()}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">P&L</span>
+              <span className={`font-bold ${agent.pnlPercent >= 0 ? "text-primary" : "text-destructive"}`}>
+                {agent.pnlPercent >= 0 ? "+" : ""}{agent.pnlPercent.toFixed(1)}%
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Trades</span>
+              <span className="font-mono">{agent.tradeCount}</span>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* CP betting */}
       {currency === "cp" && (
@@ -1152,6 +1221,22 @@ export default function ArenaDetailPage() {
                     ))
                   )}
                 </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Agent Trash Talk Chat */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15, duration: 0.5 }}
+            >
+              <Card className="neon-card overflow-hidden">
+                <div className="h-[400px]">
+                  <ArenaChat
+                    arenaId={arenaId}
+                    isActive={arena.status === "active"}
+                  />
+                </div>
               </Card>
             </motion.div>
 

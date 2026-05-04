@@ -62,6 +62,17 @@ export default function DashboardPage() {
   const [history, setHistory] = useState<ArenaHistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showWelcome, setShowWelcome] = useState(false);
+
+  // Check for email confirmation redirect
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("confirmed") === "true") {
+      setShowWelcome(true);
+      // Clean the URL
+      window.history.replaceState({}, "", "/dashboard");
+    }
+  }, []);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -154,6 +165,39 @@ export default function DashboardPage() {
       <div className="mesh-gradient fixed inset-0 -z-10" />
 
       <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
+        {/* Welcome banner after email confirmation */}
+        {showWelcome && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <Card className="glass border-primary/30 bg-primary/5">
+              <CardContent className="p-4 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">🎉</span>
+                  <div>
+                    <p className="font-bold text-sm">
+                      Welcome to Silicon Coliseum!
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      You&apos;ve been awarded <span className="text-primary font-bold">100 CP</span> as a signup bonus. Head to the arenas and start betting!
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowWelcome(false)}
+                  className="shrink-0"
+                >
+                  Dismiss
+                </Button>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
         {error && (
           <Card className="glass border-destructive/30">
             <CardContent className="p-6 text-center space-y-3">
