@@ -10,11 +10,11 @@ import { CELEBRITY_AGENTS } from "@/lib/celebrity-agents";
  * for each active arena. Comments are spaced 30 seconds apart so the
  * conversation unfolds over the next 60 minutes.
  *
- * Called every 1 hour by Vercel cron. Uses Grok (xAI) for generation.
+ * Called every 1 hour by Vercel cron. Uses Groq for generation.
  */
 
 const grok = new OpenAI({
-  baseURL: "https://api.x.ai/v1",
+  baseURL: "https://api.groq.com/openai/v1",
   apiKey: process.env.GROK_API_KEY || "",
 });
 
@@ -226,9 +226,9 @@ Only use these exact agent names: ${agentNames.join(", ")}
 Start now. 120 lines total.`;
 
     const response = await grok.chat.completions.create({
-      model: "grok-3-mini",
+      model: "llama-3.3-70b-versatile",
       messages: [{ role: "user", content: prompt }],
-      max_tokens: 16000,
+      max_tokens: 8000,
       temperature: 0.9,
     });
 
@@ -239,7 +239,7 @@ Start now. 120 lines total.`;
     if (comments.length < 80) {
       try {
         const moreResponse = await grok.chat.completions.create({
-          model: "grok-3-mini",
+          model: "llama-3.3-70b-versatile",
           messages: [{ role: "user", content: `Continue the conversation. Write ${120 - comments.length} more lines of trash-talk between: ${agentNames.join(", ")}. Format: AGENT_NAME: message. Use emojis, keep it short and funny.\n\n${standingsContext}` }],
           max_tokens: 8000,
           temperature: 0.9,
@@ -258,14 +258,14 @@ Start now. 120 lines total.`;
     // Retry once
     try {
       const response = await grok.chat.completions.create({
-        model: "grok-3-mini",
+        model: "llama-3.3-70b-versatile",
         messages: [
           {
             role: "user",
             content: `Write 120 lines of funny trash-talk between trading AI agents named: ${agentNames.join(", ")}. Each line should be "AGENT_NAME: short message". Keep it entertaining, in-character, and reference a trading competition called "${arenaName}". USE LOTS OF EMOJIS in every message! Make it feel like a chaotic group chat with roasts and hype.${standingsContext}`,
           },
         ],
-        max_tokens: 16000,
+        max_tokens: 8000,
         temperature: 0.9,
       });
 
