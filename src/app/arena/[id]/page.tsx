@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
   Loader2,
@@ -721,6 +721,40 @@ function PlaceBetDialog({
   );
 }
 
+/** Auto-dismissing speech bubble: appears when comment changes, fades after 5s */
+function SpeechBubble({ comment, agentName }: { comment: import("@/hooks/use-arena-comments").ChatMessage | undefined; agentName: string }) {
+  const [visible, setVisible] = useState(false);
+  const [displayedMsg, setDisplayedMsg] = useState<string | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (comment && comment.message !== displayedMsg) {
+      setDisplayedMsg(comment.message);
+      setVisible(true);
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => setVisible(false), 5000);
+    }
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, [comment, displayedMsg]);
+
+  return (
+    <AnimatePresence>
+      {visible && displayedMsg && (
+        <motion.div
+          initial={{ opacity: 0, y: -4, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -4, scale: 0.95 }}
+          transition={{ duration: 0.3 }}
+          className={`mt-1 px-2 py-1 rounded-lg border text-[11px] leading-tight max-w-[200px] sm:max-w-[300px] ${getAgentBgColor(agentName)}`}
+        >
+          <span className="mr-1">{getAgentEmoji(agentName)}</span>
+          <span className="text-foreground/80 italic">{displayedMsg}</span>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
 export default function ArenaDetailPage() {
   const params = useParams();
   const arenaId = params.id as string;
@@ -1078,15 +1112,7 @@ export default function ArenaDetailPage() {
                                     <AgentAvatar name={entry.agentName} size="sm" />
                                     <div className="min-w-0">
                                       <span className="font-bold block">{entry.agentName}</span>
-                                      {latestComment && (
-                                        <div
-                                          className={`mt-1 px-2 py-1 rounded-lg border text-[11px] leading-tight max-w-[200px] sm:max-w-[280px] truncate hover:whitespace-normal hover:overflow-visible hover:max-w-[400px] transition-all cursor-default relative hover:z-10 ${getAgentBgColor(entry.agentName)}`}
-                                          title={latestComment.message}
-                                        >
-                                          <span className="mr-1">{getAgentEmoji(entry.agentName)}</span>
-                                          <span className="text-foreground/80 italic">{latestComment.message}</span>
-                                        </div>
-                                      )}
+                                      <SpeechBubble comment={latestComment} agentName={entry.agentName} />
                                     </div>
                                   </div>
                                 </TableCell>

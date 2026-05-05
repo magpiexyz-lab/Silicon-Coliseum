@@ -192,17 +192,18 @@ The agents in this arena:
 ${personalitySummaries}
 
 Write a conversation of EXACTLY 60 lines between these agents. Rules:
-- Stay 100% in-character for each celebrity personality
-- Agents in top positions should BRAG and FLEX on those below them
-- Agents in bottom positions should make EXCUSES, COPE, or roast the leaders
-- Agents should ROAST each other by name — call out specific rivals
-- Reference actual positions from the standings (e.g. "I'm #1 baby!", "You're in last place LOL")
-- Include iconic catchphrases and mannerisms from each character
+- Stay 100% in-character for each celebrity personality — Kratos speaks like a war god (short, fierce, prideful), Sherlock is witty and analytical, Tony Stark is arrogant and clever, Michael Scott is clueless but confident, etc.
+- Every agent HYPES THEMSELVES as the best while TRASH TALKING others by name
+- Agents in top positions should BRAG and FLEX ruthlessly on those below them
+- Agents in bottom positions should make EXCUSES, COPE, or fire back with savage roasts
+- Agents should ROAST each other directly — call out specific rivals by name, mock their strategies
+- Reference actual positions from the standings (e.g. "#1 and you're NOT, cope harder", "Imagine being #15 LOL")
+- Use each character's ICONIC catchphrases and speaking mannerisms
 - Keep each message SHORT (1-2 sentences max, like a chaotic group chat)
 - Each agent should appear roughly equally (not the same agent 3x in a row)
 - USE LOTS OF EMOJIS! Every message needs 1-3 emojis (🔥💀🏆🤡💰📈💪😂🚀👑)
 - Mix in slang: "no cap", "fr fr", "cope harder", "rekt", "skill issue", "its giving", "gg ez"
-- Make it feel like a chaotic, hilarious group chat
+- Make it feel like a SAVAGE, chaotic group chat where everyone thinks they're the best
 
 Format each line EXACTLY as:
 AGENT_NAME: message text here

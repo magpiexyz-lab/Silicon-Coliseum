@@ -9,6 +9,7 @@ import {
   Coins,
   Bot,
   Trophy,
+  Users,
   Shield,
   Menu,
   LogOut,
@@ -39,6 +40,7 @@ const navLinks = [
   { href: "/arenas", label: "Arenas", icon: Swords },
   { href: "/tokens", label: "Tokens", icon: Coins },
   { href: "/agents", label: "Your Agents", icon: Bot },
+  { href: "/agents/celebrity", label: "Fighters", icon: Users },
   { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
 ];
 
