@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import AgentAvatar from "@/components/agent-avatar";
 import type { ChatMessage } from "@/hooks/use-arena-comments";
 
 // Agent color palette — each agent gets a consistent color
@@ -217,9 +218,9 @@ export function ArenaChat({ messages, isActive }: ArenaChatProps) {
                 transition={{ duration: 0.2 }}
                 className="flex items-start gap-2 py-1 group"
               >
-                <span className="text-base shrink-0 mt-0.5">
-                  {getAgentEmoji(msg.agent_name)}
-                </span>
+                <div className="shrink-0 mt-0.5">
+                  <AgentAvatar name={msg.agent_name} size="sm" showGlow={false} />
+                </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline gap-1.5">
                     <span

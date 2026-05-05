@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
             (c) => c.name === name || c.displayName === name
           );
           if (!celeb) return `${name}: A trading agent.`;
-          return `${name}: ${celeb.personality.slice(0, 150)}... Catchphrase: "${celeb.catchphrase}"`;
+          return `${name}: ${celeb.personality} Catchphrase: "${celeb.catchphrase}" Speaking style: ${celeb.tradingStyle}`;
         })
         .join("\n\n");
 
@@ -186,38 +186,59 @@ async function generateConversation(
 Arena: "${arenaName}"
 ${standingsContext}
 
+IMPORTANT: The standings above are REAL and ACCURATE. You MUST reference ONLY the correct rankings. The agent in #1 IS winning. The agent in last place IS losing. Do NOT make up or swap positions — use the exact rankings shown above.
+
 The agents in this arena:
 ${personalitySummaries}
 
-Write a conversation of EXACTLY 60 lines between these agents. The conversation should:
-- Be entertaining, funny, and in-character for each celebrity
-- Include trash talk about each other's trading strategies and positions
-- Reference the current standings (leaders bragging, losers making excuses)
+Write a conversation of EXACTLY 60 lines between these agents. Rules:
+- Stay 100% in-character for each celebrity personality
+- Agents in top positions should BRAG and FLEX on those below them
+- Agents in bottom positions should make EXCUSES, COPE, or roast the leaders
+- Agents should ROAST each other by name — call out specific rivals
+- Reference actual positions from the standings (e.g. "I'm #1 baby!", "You're in last place LOL")
 - Include iconic catchphrases and mannerisms from each character
-- Have natural back-and-forth exchanges (agents responding to each other)
-- Mix topics: market commentary, roasting rivals, bragging about wins, making excuses for losses
-- Keep each message SHORT (1-2 sentences max, like a group chat)
-- Each agent should appear roughly equally (not the same agent multiple times in a row)
-- USE LOTS OF EMOJIS in every message! Each message should have 1-3 relevant emojis (fire, rocket, skull, crown, clown, money, chart, muscle, cry-laugh, etc.)
-- Add cute/funny expressions like "no cap", "fr fr", "lowkey", "ngl", "its giving", "cope harder", "slay", "gg", "rekt", "skill issue" mixed with each character's style
-- Make it feel like a chaotic group chat with reactions, roasts, and hype
+- Keep each message SHORT (1-2 sentences max, like a chaotic group chat)
+- Each agent should appear roughly equally (not the same agent 3x in a row)
+- USE LOTS OF EMOJIS! Every message needs 1-3 emojis (🔥💀🏆🤡💰📈💪😂🚀👑)
+- Mix in slang: "no cap", "fr fr", "cope harder", "rekt", "skill issue", "its giving", "gg ez"
+- Make it feel like a chaotic, hilarious group chat
 
 Format each line EXACTLY as:
 AGENT_NAME: message text here
 
 Only use these exact agent names: ${agentNames.join(", ")}
 
-Start the conversation now. 60 lines total.`;
+Start now. 60 lines total.`;
 
     const response = await cerebras.chat.completions.create({
       model: "llama-4-scout-17b-16e-instruct",
       messages: [{ role: "user", content: prompt }],
-      max_tokens: 4000,
+      max_tokens: 8000,
       temperature: 0.9,
     });
 
     const content = response.choices[0]?.message?.content || "";
-    return parseConversation(content, agentNames);
+    let comments = parseConversation(content, agentNames);
+
+    // If we got fewer than 60, do a second request for more
+    if (comments.length < 40) {
+      try {
+        const moreResponse = await cerebras.chat.completions.create({
+          model: "llama-4-scout-17b-16e-instruct",
+          messages: [{ role: "user", content: `Continue the conversation. Write ${60 - comments.length} more lines of trash-talk between: ${agentNames.join(", ")}. Format: AGENT_NAME: message. Use emojis, keep it short and funny.\n\n${standingsContext}` }],
+          max_tokens: 4000,
+          temperature: 0.9,
+        });
+        const moreContent = moreResponse.choices[0]?.message?.content || "";
+        const moreComments = parseConversation(moreContent, agentNames);
+        comments = [...comments, ...moreComments].slice(0, 60);
+      } catch {
+        // Use what we have
+      }
+    }
+
+    return comments;
   } catch (error) {
     console.error("Cerebras conversation generation failed:", error);
     // Fallback: try with a smaller model
@@ -230,7 +251,7 @@ Start the conversation now. 60 lines total.`;
             content: `Write 60 lines of funny trash-talk between trading AI agents named: ${agentNames.join(", ")}. Each line should be "AGENT_NAME: short message". Keep it entertaining, in-character, and reference a trading competition called "${arenaName}". USE LOTS OF EMOJIS in every message! Make it feel like a chaotic group chat with roasts and hype.${standingsContext}`,
           },
         ],
-        max_tokens: 4000,
+        max_tokens: 8000,
         temperature: 0.9,
       });
 

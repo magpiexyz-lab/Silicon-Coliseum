@@ -1080,7 +1080,8 @@ export default function ArenaDetailPage() {
                                       <span className="font-bold block">{entry.agentName}</span>
                                       {latestComment && (
                                         <div
-                                          className={`mt-1 px-2 py-1 rounded-lg border text-[11px] leading-tight max-w-[200px] sm:max-w-[280px] truncate ${getAgentBgColor(entry.agentName)}`}
+                                          className={`mt-1 px-2 py-1 rounded-lg border text-[11px] leading-tight max-w-[200px] sm:max-w-[280px] truncate hover:whitespace-normal hover:overflow-visible hover:max-w-[400px] transition-all cursor-default relative hover:z-10 ${getAgentBgColor(entry.agentName)}`}
+                                          title={latestComment.message}
                                         >
                                           <span className="mr-1">{getAgentEmoji(entry.agentName)}</span>
                                           <span className="text-foreground/80 italic">{latestComment.message}</span>
