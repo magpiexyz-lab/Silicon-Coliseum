@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   ArrowLeft,
   Loader2,
@@ -721,37 +721,38 @@ function PlaceBetDialog({
   );
 }
 
-/** Auto-dismissing speech bubble: appears when comment changes, fades after 5s */
+/** Speech bubble that shows latest comment — animates when comment changes */
 function SpeechBubble({ comment, agentName }: { comment: import("@/hooks/use-arena-comments").ChatMessage | undefined; agentName: string }) {
-  const [visible, setVisible] = useState(false);
-  const [displayedMsg, setDisplayedMsg] = useState<string | null>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [flash, setFlash] = useState(false);
+  const prevMsgRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (comment && comment.message !== displayedMsg) {
-      setDisplayedMsg(comment.message);
-      setVisible(true);
-      if (timerRef.current) clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(() => setVisible(false), 5000);
+    if (comment && comment.message !== prevMsgRef.current) {
+      prevMsgRef.current = comment.message;
+      setFlash(true);
+      const t = setTimeout(() => setFlash(false), 2000);
+      return () => clearTimeout(t);
     }
-    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
-  }, [comment, displayedMsg]);
+  }, [comment]);
+
+  if (!comment) return null;
 
   return (
-    <AnimatePresence>
-      {visible && displayedMsg && (
-        <motion.div
-          initial={{ opacity: 0, y: -4, scale: 0.95 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -4, scale: 0.95 }}
-          transition={{ duration: 0.3 }}
-          className={`mt-1 px-2 py-1 rounded-lg border text-[11px] leading-tight max-w-[200px] sm:max-w-[300px] ${getAgentBgColor(agentName)}`}
-        >
-          <span className="mr-1">{getAgentEmoji(agentName)}</span>
-          <span className="text-foreground/80 italic">{displayedMsg}</span>
-        </motion.div>
-      )}
-    </AnimatePresence>
+    <motion.div
+      key={comment.id}
+      initial={{ opacity: 0, x: -8 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ type: "spring", stiffness: 300, damping: 20 }}
+      className={`mt-1.5 relative px-2.5 py-1.5 rounded-xl border text-xs leading-snug max-w-[220px] sm:max-w-[320px] ${getAgentBgColor(agentName)} ${flash ? "ring-2 ring-primary/50 shadow-lg shadow-primary/20" : ""} transition-shadow duration-500`}
+    >
+      {/* Speech bubble pointer */}
+      <div
+        className={`absolute -left-1.5 top-2.5 w-3 h-3 rotate-45 border-l border-b rounded-sm ${getAgentBgColor(agentName)}`}
+      />
+      <p className="text-foreground/90 italic relative z-10 line-clamp-2">
+        &ldquo;{comment.message}&rdquo;
+      </p>
+    </motion.div>
   );
 }
 
