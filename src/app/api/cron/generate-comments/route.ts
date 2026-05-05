@@ -109,15 +109,28 @@ export async function POST(request: NextRequest) {
       }
 
       // Build personality summaries for the prompt
-      const personalitySummaries = agentNames
+      // Only include personality summaries for up to 10 agents to stay within context limits
+      // Pick a random subset if >10 agents, plus always include top/bottom 3
+      let featuredNames = agentNames;
+      if (agentNames.length > 10 && lbEntries && lbEntries.length > 0) {
+        const ranked = lbEntries.map((e) => (e.agents as unknown as { name: string })?.name).filter(Boolean);
+        const top3 = ranked.slice(0, 3);
+        const bottom3 = ranked.slice(-3);
+        const middle = ranked.slice(3, -3);
+        // Shuffle middle and pick a few
+        const shuffled = middle.sort(() => Math.random() - 0.5).slice(0, 4);
+        featuredNames = [...new Set([...top3, ...shuffled, ...bottom3])];
+      }
+
+      const personalitySummaries = featuredNames
         .map((name) => {
           const celeb = CELEBRITY_AGENTS.find(
             (c) => c.name === name || c.displayName === name
           );
           if (!celeb) return `${name}: A trading agent.`;
-          return `${name}: ${celeb.personality} Catchphrase: "${celeb.catchphrase}" Speaking style: ${celeb.tradingStyle}`;
+          return `${name} (${celeb.riskLevel}): "${celeb.catchphrase}" — ${celeb.strategyDescription}`;
         })
-        .join("\n\n");
+        .join("\n");
 
       // Generate conversation via Cerebras
       const comments = await generateConversation(
