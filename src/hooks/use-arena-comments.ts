@@ -65,12 +65,22 @@ export function useArenaComments(arenaId: string, isActive: boolean) {
   // Compute latest comment per agent (for speech bubbles)
   const latestByAgent = useCallback(() => {
     const map = new Map<string, ChatMessage>();
-    // messages are in chronological order, so last one wins
     for (const msg of messages) {
       map.set(msg.agent_name, msg);
     }
     return map;
   }, [messages]);
 
-  return { messages, latestByAgent: latestByAgent() };
+  // All comments grouped by agent (for hover popover)
+  const commentsByAgent = useCallback(() => {
+    const map = new Map<string, ChatMessage[]>();
+    for (const msg of messages) {
+      const list = map.get(msg.agent_name) || [];
+      list.push(msg);
+      map.set(msg.agent_name, list);
+    }
+    return map;
+  }, [messages]);
+
+  return { messages, latestByAgent: latestByAgent(), commentsByAgent: commentsByAgent() };
 }

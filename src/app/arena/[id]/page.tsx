@@ -51,6 +51,11 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
   Table,
   TableBody,
   TableCell,
@@ -62,7 +67,7 @@ import RiskLevelBadge from "@/components/risk-level-badge";
 import AgentAvatar from "@/components/agent-avatar";
 import { SolBetPanel } from "@/components/sol-bet-panel";
 import { ArenaChat, getAgentColor, getAgentEmoji, getAgentBgColor } from "@/components/arena-chat";
-import { useArenaComments } from "@/hooks/use-arena-comments";
+import { useArenaComments, type ChatMessage } from "@/hooks/use-arena-comments";
 import type { RiskLevel } from "@/lib/types";
 
 import { statusColors } from "@/lib/status-colors";
@@ -721,37 +726,108 @@ function PlaceBetDialog({
   );
 }
 
-/** Speech bubble that shows latest comment — animates when comment changes */
-function SpeechBubble({ comment, agentName }: { comment: import("@/hooks/use-arena-comments").ChatMessage | undefined; agentName: string }) {
-  const [flash, setFlash] = useState(false);
-  const prevMsgRef = useRef<string | null>(null);
+/** Truncated latest comment with popover showing all agent comments on hover */
+function AgentCommentSnippet({
+  latestComment,
+  allComments,
+  agentName,
+}: {
+  latestComment: ChatMessage | undefined;
+  allComments: ChatMessage[];
+  agentName: string;
+}) {
+  if (!latestComment) return null;
 
-  useEffect(() => {
-    if (comment && comment.message !== prevMsgRef.current) {
-      prevMsgRef.current = comment.message;
-      setFlash(true);
-      const t = setTimeout(() => setFlash(false), 2000);
-      return () => clearTimeout(t);
-    }
-  }, [comment]);
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          className={`mt-1 px-2 py-0.5 rounded-md border text-[11px] leading-tight max-w-[180px] sm:max-w-[260px] truncate text-left cursor-pointer hover:brightness-125 transition-all ${getAgentBgColor(agentName)}`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <span className="text-foreground/80 italic">&ldquo;{latestComment.message}&rdquo;</span>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        side="right"
+        align="start"
+        className="w-80 max-h-64 overflow-y-auto p-0 glass border-border/40"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="px-3 py-2 border-b border-border/30 flex items-center gap-2">
+          <AgentAvatar name={agentName} size="sm" showGlow={false} />
+          <span className={`font-bold text-sm ${getAgentColor(agentName)}`}>
+            {agentName}
+          </span>
+          <span className="text-[10px] text-muted-foreground ml-auto">
+            {allComments.length} message{allComments.length !== 1 ? "s" : ""}
+          </span>
+        </div>
+        <div className="px-3 py-2 space-y-2">
+          {allComments.length === 0 ? (
+            <p className="text-xs text-muted-foreground text-center py-2">No comments yet</p>
+          ) : (
+            [...allComments].reverse().map((msg) => (
+              <div key={msg.id} className="text-xs">
+                <p className="text-foreground/90 leading-snug">{msg.message}</p>
+                <p className="text-[10px] text-muted-foreground/50 mt-0.5">
+                  {new Date(msg.display_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                </p>
+              </div>
+            ))
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
+/** Floating WhatsApp-style notification when a new comment arrives */
+function NewCommentNotification({
+  comment,
+  onDismiss,
+}: {
+  comment: ChatMessage | null;
+  onDismiss: () => void;
+}) {
   if (!comment) return null;
 
   return (
     <motion.div
       key={comment.id}
-      initial={{ opacity: 0, x: -8 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ type: "spring", stiffness: 300, damping: 20 }}
-      className={`mt-1.5 relative px-2.5 py-1.5 rounded-xl border text-xs leading-snug max-w-[220px] sm:max-w-[320px] ${getAgentBgColor(agentName)} ${flash ? "ring-2 ring-primary/50 shadow-lg shadow-primary/20" : ""} transition-shadow duration-500`}
+      initial={{ opacity: 0, y: -20, scale: 0.9 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -20, scale: 0.9 }}
+      transition={{ type: "spring", stiffness: 400, damping: 25 }}
+      className="sticky top-0 z-20 mx-2 mb-2"
     >
-      {/* Speech bubble pointer */}
       <div
-        className={`absolute -left-1.5 top-2.5 w-3 h-3 rotate-45 border-l border-b rounded-sm ${getAgentBgColor(agentName)}`}
-      />
-      <p className="text-foreground/90 italic relative z-10 line-clamp-2">
-        &ldquo;{comment.message}&rdquo;
-      </p>
+        className={`relative px-3 py-2.5 rounded-xl border-2 shadow-xl cursor-pointer ${getAgentBgColor(comment.agent_name)} border-primary/40`}
+        onClick={onDismiss}
+      >
+        {/* Pointer arrow pointing down */}
+        <div className="absolute -bottom-2 left-6 w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-t-[8px] border-t-primary/40" />
+
+        <div className="flex items-start gap-2.5">
+          <AgentAvatar name={comment.agent_name} size="sm" showGlow={false} />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <span className={`font-bold text-xs ${getAgentColor(comment.agent_name)}`}>
+                {comment.agent_name}
+              </span>
+              <span className="text-[9px] text-primary font-semibold uppercase tracking-wider">
+                NEW
+              </span>
+            </div>
+            <p className="text-sm text-foreground/90 leading-snug mt-0.5">
+              {comment.message}
+            </p>
+          </div>
+        </div>
+
+        {/* Pulsing glow effect */}
+        <div className="absolute inset-0 rounded-xl animate-pulse bg-primary/5 pointer-events-none" />
+      </div>
     </motion.div>
   );
 }
@@ -772,10 +848,27 @@ export default function ArenaDetailPage() {
   const [myBets, setMyBets] = useState<MyBet[]>([]);
 
   // Shared comments hook for both chat and speech bubbles
-  const { messages: chatMessages, latestByAgent } = useArenaComments(
+  const { messages: chatMessages, latestByAgent, commentsByAgent } = useArenaComments(
     arenaId,
     arena?.status === "active"
   );
+
+  // Track new comment notifications
+  const [newCommentNotif, setNewCommentNotif] = useState<import("@/hooks/use-arena-comments").ChatMessage | null>(null);
+  const prevMsgCountRef = useRef(0);
+  const notifTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (chatMessages.length > prevMsgCountRef.current && prevMsgCountRef.current > 0) {
+      // New message arrived — show notification for the latest one
+      const newest = chatMessages[chatMessages.length - 1];
+      setNewCommentNotif(newest);
+      if (notifTimerRef.current) clearTimeout(notifTimerRef.current);
+      notifTimerRef.current = setTimeout(() => setNewCommentNotif(null), 6000);
+    }
+    prevMsgCountRef.current = chatMessages.length;
+    return () => { if (notifTimerRef.current) clearTimeout(notifTimerRef.current); };
+  }, [chatMessages]);
 
   const fetchData = useCallback(async () => {
     if (!arenaId) return;
@@ -1064,7 +1157,13 @@ export default function ArenaDetailPage() {
                     No fighters yet. Be the first brave soul to enter! 🫡
                   </p>
                 ) : (
-                  <div className="overflow-x-auto">
+                  <div>
+                    {/* New comment notification popup */}
+                    <NewCommentNotification
+                      comment={newCommentNotif}
+                      onDismiss={() => setNewCommentNotif(null)}
+                    />
+                    <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -1113,7 +1212,11 @@ export default function ArenaDetailPage() {
                                     <AgentAvatar name={entry.agentName} size="sm" />
                                     <div className="min-w-0">
                                       <span className="font-bold block">{entry.agentName}</span>
-                                      <SpeechBubble comment={latestComment} agentName={entry.agentName} />
+                                      <AgentCommentSnippet
+                                        latestComment={latestComment}
+                                        allComments={commentsByAgent.get(entry.agentName) || []}
+                                        agentName={entry.agentName}
+                                      />
                                     </div>
                                   </div>
                                 </TableCell>
@@ -1202,6 +1305,7 @@ export default function ArenaDetailPage() {
                         })}
                       </TableBody>
                     </Table>
+                  </div>
                   </div>
                 )}
               </CardContent>
