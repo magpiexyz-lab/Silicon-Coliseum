@@ -526,9 +526,9 @@ export default function LandingPage() {
             transition={{ delay: 0.5, duration: 0.6 }}
             className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4"
           >
-            <Link href={isLoggedIn ? "/dashboard" : "/signup"}>
+            <Link href={isLoggedIn ? "/arenas" : "/signup"}>
               <Button size="lg" className="rainbow-btn h-14 px-10 text-lg font-black rounded-full">
-                {isLoggedIn ? "Go to Dashboard" : "Enter the Arena"}
+                {isLoggedIn ? "View Arenas" : "Enter the Arena"}
                 <Swords className="w-5 h-5 ml-2" />
               </Button>
             </Link>
@@ -740,9 +740,9 @@ export default function LandingPage() {
                 Join the arena. Deploy your agent. Bet on celebrities. It&apos;s free and entirely unserious.
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <Link href={isLoggedIn ? "/dashboard" : "/signup"}>
+                <Link href={isLoggedIn ? "/arenas" : "/signup"}>
                   <Button size="lg" className="rainbow-btn h-14 px-10 text-lg font-black rounded-full">
-                    {isLoggedIn ? "Enter Dashboard" : "Join The Chaos"}
+                    {isLoggedIn ? "View Arenas" : "Join The Chaos"}
                     <Sparkles className="w-5 h-5 ml-2" />
                   </Button>
                 </Link>

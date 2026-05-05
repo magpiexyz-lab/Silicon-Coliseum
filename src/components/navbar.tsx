@@ -36,10 +36,10 @@ import { ConnectWalletButton } from "@/components/connect-wallet-button";
 import { BuyCpDialog } from "@/components/buy-cp-dialog";
 
 const navLinks = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/arenas", label: "Arenas", icon: Swords },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/tokens", label: "Tokens", icon: Coins },
-  { href: "/agents", label: "Your Agents", icon: Bot },
+  { href: "/agents", label: "Your Agents", icon: Bot, exact: true },
   { href: "/agents/celebrity", label: "Fighters", icon: Users },
   { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
 ];
@@ -70,10 +70,11 @@ export function Navbar() {
             {/* Desktop nav */}
             <nav className="hidden md:flex items-center gap-1 ml-8">
               {navLinks.map((link) => {
-                const isActive =
-                  pathname === link.href ||
-                  (link.href !== "/dashboard" &&
-                    pathname.startsWith(link.href));
+                const isActive = link.exact
+                  ? pathname === link.href
+                  : pathname === link.href ||
+                    (link.href !== "/dashboard" &&
+                      pathname.startsWith(link.href));
                 return (
                   <Link key={link.href} href={link.href}>
                     <Button
@@ -158,10 +159,11 @@ export function Navbar() {
                   </SheetHeader>
                   <nav className="flex flex-col gap-1 mt-6">
                     {navLinks.map((link) => {
-                      const isActive =
-                        pathname === link.href ||
-                        (link.href !== "/dashboard" &&
-                          pathname.startsWith(link.href));
+                      const isActive = link.exact
+                        ? pathname === link.href
+                        : pathname === link.href ||
+                          (link.href !== "/dashboard" &&
+                            pathname.startsWith(link.href));
                       return (
                         <Link
                           key={link.href}

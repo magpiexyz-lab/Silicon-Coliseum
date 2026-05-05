@@ -51,11 +51,6 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
   Table,
   TableBody,
   TableCell,
@@ -726,7 +721,7 @@ function PlaceBetDialog({
   );
 }
 
-/** Truncated latest comment with popover showing all agent comments on hover */
+/** Truncated latest comment — hover to show all agent comments */
 function AgentCommentSnippet({
   latestComment,
   allComments,
@@ -739,22 +734,17 @@ function AgentCommentSnippet({
   if (!latestComment) return null;
 
   return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <button
-          className={`mt-1 px-2 py-0.5 rounded-md border text-[11px] leading-tight max-w-[180px] sm:max-w-[260px] truncate text-left cursor-pointer hover:brightness-125 transition-all ${getAgentBgColor(agentName)}`}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <span className="text-foreground/80 italic">&ldquo;{latestComment.message}&rdquo;</span>
-        </button>
-      </PopoverTrigger>
-      <PopoverContent
-        side="right"
-        align="start"
-        className="w-80 max-h-64 overflow-y-auto p-0 glass border-border/40"
-        onClick={(e) => e.stopPropagation()}
+    <div className="relative group/comment mt-1" onClick={(e) => e.stopPropagation()}>
+      {/* Truncated snippet */}
+      <div
+        className={`px-2 py-0.5 rounded-md border text-[11px] leading-tight max-w-[180px] sm:max-w-[260px] truncate cursor-default ${getAgentBgColor(agentName)}`}
       >
-        <div className="px-3 py-2 border-b border-border/30 flex items-center gap-2">
+        <span className="text-foreground/80 italic">&ldquo;{latestComment.message}&rdquo;</span>
+      </div>
+
+      {/* Hover dropdown with all comments */}
+      <div className="absolute left-0 top-full mt-1 z-50 w-80 max-h-72 overflow-y-auto rounded-xl border shadow-2xl glass border-border/40 opacity-0 invisible group-hover/comment:opacity-100 group-hover/comment:visible transition-all duration-200 pointer-events-none group-hover/comment:pointer-events-auto">
+        <div className="px-3 py-2 border-b border-border/30 flex items-center gap-2 sticky top-0 bg-background/95 backdrop-blur-sm">
           <AgentAvatar name={agentName} size="sm" showGlow={false} />
           <span className={`font-bold text-sm ${getAgentColor(agentName)}`}>
             {agentName}
@@ -763,7 +753,7 @@ function AgentCommentSnippet({
             {allComments.length} message{allComments.length !== 1 ? "s" : ""}
           </span>
         </div>
-        <div className="px-3 py-2 space-y-2">
+        <div className="px-3 py-2 space-y-2.5">
           {allComments.length === 0 ? (
             <p className="text-xs text-muted-foreground text-center py-2">No comments yet</p>
           ) : (
@@ -777,8 +767,8 @@ function AgentCommentSnippet({
             ))
           )}
         </div>
-      </PopoverContent>
-    </Popover>
+      </div>
+    </div>
   );
 }
 
@@ -802,24 +792,24 @@ function NewCommentNotification({
       className="sticky top-0 z-20 mx-2 mb-2"
     >
       <div
-        className={`relative px-3 py-2.5 rounded-xl border-2 shadow-xl cursor-pointer ${getAgentBgColor(comment.agent_name)} border-primary/40`}
+        className={`relative px-4 py-3.5 rounded-xl border-2 shadow-2xl cursor-pointer ${getAgentBgColor(comment.agent_name)} border-primary/50`}
         onClick={onDismiss}
       >
         {/* Pointer arrow pointing down */}
-        <div className="absolute -bottom-2 left-6 w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-t-[8px] border-t-primary/40" />
+        <div className="absolute -bottom-2.5 left-8 w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-t-[10px] border-t-primary/50" />
 
-        <div className="flex items-start gap-2.5">
-          <AgentAvatar name={comment.agent_name} size="sm" showGlow={false} />
+        <div className="flex items-start gap-3">
+          <AgentAvatar name={comment.agent_name} size="md" showGlow />
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <span className={`font-bold text-xs ${getAgentColor(comment.agent_name)}`}>
+              <span className={`font-bold text-sm ${getAgentColor(comment.agent_name)}`}>
                 {comment.agent_name}
               </span>
-              <span className="text-[9px] text-primary font-semibold uppercase tracking-wider">
+              <span className="text-[10px] text-primary font-bold uppercase tracking-wider animate-pulse">
                 NEW
               </span>
             </div>
-            <p className="text-sm text-foreground/90 leading-snug mt-0.5">
+            <p className="text-base text-foreground/90 leading-snug mt-1">
               {comment.message}
             </p>
           </div>
@@ -864,7 +854,7 @@ export default function ArenaDetailPage() {
       const newest = chatMessages[chatMessages.length - 1];
       setNewCommentNotif(newest);
       if (notifTimerRef.current) clearTimeout(notifTimerRef.current);
-      notifTimerRef.current = setTimeout(() => setNewCommentNotif(null), 6000);
+      notifTimerRef.current = setTimeout(() => setNewCommentNotif(null), 14000);
     }
     prevMsgCountRef.current = chatMessages.length;
     return () => { if (notifTimerRef.current) clearTimeout(notifTimerRef.current); };
@@ -1314,11 +1304,27 @@ export default function ArenaDetailPage() {
 
           {/* Right sidebar */}
           <div className="space-y-6">
-            {/* Token Prices */}
+            {/* Agent Trash Talk Chat */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1, duration: 0.5 }}
+            >
+              <Card className="neon-card overflow-hidden">
+                <div className="h-[450px]">
+                  <ArenaChat
+                    messages={chatMessages}
+                    isActive={arena.status === "active"}
+                  />
+                </div>
+              </Card>
+            </motion.div>
+
+            {/* Token Prices */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15, duration: 0.5 }}
             >
               <Card className="neon-card">
                 <CardHeader>
@@ -1371,22 +1377,6 @@ export default function ArenaDetailPage() {
                     ))
                   )}
                 </CardContent>
-              </Card>
-            </motion.div>
-
-            {/* Agent Trash Talk Chat */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.15, duration: 0.5 }}
-            >
-              <Card className="neon-card overflow-hidden">
-                <div className="h-[400px]">
-                  <ArenaChat
-                    messages={chatMessages}
-                    isActive={arena.status === "active"}
-                  />
-                </div>
               </Card>
             </motion.div>
 

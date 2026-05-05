@@ -213,9 +213,10 @@ export function ArenaChat({ messages, isActive }: ArenaChatProps) {
             {messages.map((msg) => (
               <motion.div
                 key={msg.id}
-                initial={{ opacity: 0, y: 10, scale: 0.97 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ duration: 0.2 }}
+                initial={{ opacity: 0, x: -40 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ type: "spring", stiffness: 300, damping: 24 }}
+                layout
                 className="flex items-start gap-2 py-1 group"
               >
                 <div className="shrink-0 mt-0.5">

@@ -57,25 +57,25 @@
 
 /* Light theme overrides */
 .light {
-  --color-background: oklch(0.97 0.01 280);
-  --color-foreground: oklch(0.12 0.03 280);
-  --color-card: oklch(1 0 0);
-  --color-card-foreground: oklch(0.12 0.03 280);
-  --color-primary: oklch(0.55 0.25 320);
-  --color-primary-foreground: oklch(0.985 0.002 260);
-  --color-secondary: oklch(0.6 0.18 60);
-  --color-secondary-foreground: oklch(0.985 0.002 260);
-  --color-destructive: oklch(0.55 0.25 25);
-  --color-destructive-foreground: oklch(0.985 0.002 260);
-  --color-muted: oklch(0.93 0.008 280);
-  --color-muted-foreground: oklch(0.45 0.02 280);
-  --color-accent: oklch(0.95 0.008 280);
-  --color-accent-foreground: oklch(0.12 0.03 280);
-  --color-border: oklch(0.85 0.015 280);
-  --color-input: oklch(0.85 0.015 280);
-  --color-ring: oklch(0.55 0.25 320);
-  --color-popover: oklch(1 0 0);
-  --color-popover-foreground: oklch(0.12 0.03 280);
+  --color-background: oklch(0.97 0.015 290);
+  --color-foreground: oklch(0.1 0.02 280);
+  --color-card: oklch(0.99 0.005 290);
+  --color-card-foreground: oklch(0.1 0.02 280);
+  --color-primary: oklch(0.5 0.25 320);
+  --color-primary-foreground: oklch(0.99 0.002 260);
+  --color-secondary: oklch(0.55 0.18 60);
+  --color-secondary-foreground: oklch(0.99 0.002 260);
+  --color-destructive: oklch(0.5 0.25 25);
+  --color-destructive-foreground: oklch(0.99 0.002 260);
+  --color-muted: oklch(0.94 0.01 290);
+  --color-muted-foreground: oklch(0.4 0.02 280);
+  --color-accent: oklch(0.95 0.012 290);
+  --color-accent-foreground: oklch(0.1 0.02 280);
+  --color-border: oklch(0.88 0.02 290);
+  --color-input: oklch(0.88 0.02 290);
+  --color-ring: oklch(0.5 0.25 320);
+  --color-popover: oklch(0.99 0.005 290);
+  --color-popover-foreground: oklch(0.1 0.02 280);
 }
 
 @layer base {
@@ -154,9 +154,9 @@
 
 .light .mesh-gradient {
   background:
-    radial-gradient(ellipse at 20% 30%, oklch(0.75 0.28 340 / 0.06) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 20%, oklch(0.8 0.18 195 / 0.05) 0%, transparent 50%),
-    radial-gradient(ellipse at 40% 80%, oklch(0.65 0.28 300 / 0.04) 0%, transparent 50%);
+    radial-gradient(ellipse at 20% 30%, oklch(0.85 0.12 320 / 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, oklch(0.9 0.08 195 / 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 40% 80%, oklch(0.88 0.1 290 / 0.05) 0%, transparent 50%);
 }
 
 /* -- Grain Texture Overlay -- */
@@ -304,6 +304,27 @@
   border: 1px solid oklch(0.75 0.28 340 / 0.3);
 }
 
+.light .agent-badge-conservative {
+  background: oklch(0.9 0.06 195 / 0.5);
+  color: oklch(0.35 0.15 195);
+  border: 1px solid oklch(0.6 0.12 195 / 0.4);
+}
+.light .agent-badge-balanced {
+  background: oklch(0.9 0.06 145 / 0.5);
+  color: oklch(0.35 0.15 145);
+  border: 1px solid oklch(0.6 0.12 145 / 0.4);
+}
+.light .agent-badge-aggressive {
+  background: oklch(0.92 0.06 60 / 0.5);
+  color: oklch(0.4 0.15 60);
+  border: 1px solid oklch(0.65 0.12 60 / 0.4);
+}
+.light .agent-badge-degen {
+  background: oklch(0.92 0.06 340 / 0.5);
+  color: oklch(0.4 0.2 340);
+  border: 1px solid oklch(0.6 0.15 340 / 0.4);
+}
+
 /* -- Rainbow button -- */
 .rainbow-btn {
   background: linear-gradient(90deg, oklch(0.75 0.28 340), oklch(0.8 0.18 195), oklch(0.78 0.22 145), oklch(0.9 0.18 95), oklch(0.75 0.28 340));
@@ -336,6 +357,11 @@
   width: 3rem;
   height: 3rem;
   font-size: 1.5rem;
+}
+
+.light .token-icon {
+  background: oklch(0.95 0.015 290 / 0.9);
+  border: 2px solid oklch(0.8 0.04 320 / 0.4);
 }
 
 /* -- Keyframe Animations -- */
