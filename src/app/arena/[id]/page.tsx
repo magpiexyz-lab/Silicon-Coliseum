@@ -21,7 +21,6 @@ import {
   ChevronDown,
   ChevronUp,
   Brain,
-  Timer,
   Wallet,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -960,7 +959,6 @@ export default function ArenaDetailPage() {
   }, [arenaId, arena]);
 
   const timeLeft = useCountdown(arena?.competitionEnd ?? null);
-  const nextEval = useNextEvalCountdown(arena?.competitionStart ?? null, arena?.status ?? "");
   const bettingPhaseEnd = arena?.bettingPhaseEnd ?? null;
   const isBettingPhase = bettingPhaseEnd ? new Date(bettingPhaseEnd) > new Date() : false;
   const bettingCountdown = useCountdown(isBettingPhase ? bettingPhaseEnd : null);
@@ -1060,12 +1058,6 @@ export default function ArenaDetailPage() {
                 Betting ends: {bettingCountdown}
               </Badge>
             )}
-            {arena.status === "active" && nextEval && (
-              <Badge variant="outline" className="font-mono gap-1 border-primary/30 text-primary">
-                <Timer className="w-3 h-3" />
-                Next eval: {nextEval}
-              </Badge>
-            )}
             {arena.status === "active" && timeLeft && (
               <span className="text-sm font-mono text-primary flex items-center gap-1">
                 <Clock className="w-3.5 h-3.5" />
@@ -1153,15 +1145,12 @@ export default function ArenaDetailPage() {
                       comment={newCommentNotif}
                       onDismiss={() => setNewCommentNotif(null)}
                     />
-                    <div className="overflow-x-auto">
+                    <div className="overflow-hidden">
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="w-16">Rank</TableHead>
+                          <TableHead className="w-12">Rank</TableHead>
                           <TableHead>Agent</TableHead>
-                          <TableHead className="hidden sm:table-cell">
-                            Owner
-                          </TableHead>
                           <TableHead className="hidden sm:table-cell">
                             Risk
                           </TableHead>
@@ -1209,9 +1198,6 @@ export default function ArenaDetailPage() {
                                       />
                                     </div>
                                   </div>
-                                </TableCell>
-                                <TableCell className="text-muted-foreground hidden sm:table-cell">
-                                  {entry.ownerUsername}
                                 </TableCell>
                                 <TableCell className="hidden sm:table-cell">
                                   <RiskLevelBadge level={entry.riskLevel} />

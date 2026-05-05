@@ -2,7 +2,7 @@ import { NextResponse, NextRequest } from "next/server";
 import { createServiceClient } from "@/lib/supabase-server";
 import { applyDrift, applyCashDecay, getRealPriceTargets } from "@/lib/drift";
 import { calculatePrice } from "@/lib/amm";
-import { evaluateAgent } from "@/lib/agent-engine";
+import { evaluateAllAgents } from "@/lib/agent-engine";
 import { executeBuy, executeSell } from "@/lib/trade-executor";
 import type { Pool, Agent, ArenaTrade } from "@/lib/types";
 
@@ -226,81 +226,92 @@ export async function POST(request: NextRequest) {
           symbolToTokenId.set(symbol, id);
         }
 
-        // 6. Evaluate each active agent
+        // 6. Batch evaluate ALL agents in a single Cerebras prompt
+        // Fetch holdings for all agents
+        const agentContexts = await Promise.all(
+          agents.map(async (agent) => {
+            const { data: balances } = await supabase
+              .from("arena_balances")
+              .select("*, platform_tokens(symbol)")
+              .eq("arena_id", arenaId)
+              .eq("agent_id", agent.id);
+
+            const holdings = (balances || [])
+              .filter((b) => b.amount > 0)
+              .map((b) => ({
+                symbol: b.platform_tokens?.symbol || tokenSymbolMap.get(b.token_id) || "?",
+                amount: b.amount as number,
+              }));
+
+            return { agent, holdings };
+          })
+        );
+
+        const batchDecisions = await evaluateAllAgents(
+          agentContexts,
+          pools,
+          poolPrices,
+          recentTrades,
+          tokenSymbolMap
+        );
+
+        summary.agentsEvaluated += agents.length;
+
+        // Execute trades with staggered timing (1-2s between agents)
         for (const agent of agents) {
-          try {
-            const decision = await evaluateAgent(
-              supabase,
-              agent,
-              pools,
-              poolPrices,
-              recentTrades
-            );
+          const decision = batchDecisions.get(agent.name);
+          if (!decision || decision.actions.length === 0) continue;
 
-            summary.agentsEvaluated++;
+          // Stagger: wait 1000-2000ms between each agent's trades
+          const delay = 1000 + Math.floor(Math.random() * 1000);
+          await new Promise((r) => setTimeout(r, delay));
 
-            // Execute trades from AI decision
-            for (const action of decision.actions) {
-              if (action.action === "HOLD") continue;
+          for (const action of decision.actions) {
+            if (action.action === "HOLD") continue;
 
-              // Find pool for this token
-              const tokenId = symbolToTokenId.get(action.tokenSymbol);
-              if (!tokenId) continue;
+            const tokenId = symbolToTokenId.get(action.tokenSymbol);
+            if (!tokenId) continue;
 
-              const pool = pools.find((p) => p.tokenId === tokenId);
-              if (!pool) continue;
+            const pool = pools.find((p) => p.tokenId === tokenId);
+            if (!pool) continue;
 
-              try {
-                if (action.action === "BUY" && action.amountVusd > 0) {
-                  await executeBuy(
+            try {
+              if (action.action === "BUY" && action.amountVusd > 0) {
+                await executeBuy(
+                  supabase,
+                  arenaId,
+                  agent.id,
+                  pool.id,
+                  Math.min(action.amountVusd, agent.cashBalance)
+                );
+                summary.tradesExecuted++;
+              } else if (action.action === "SELL" && action.amountVusd > 0) {
+                const price = poolPrices.get(pool.id) || 1;
+                const tokenAmount = action.amountVusd / price;
+
+                const { data: balance } = await supabase
+                  .from("arena_balances")
+                  .select("amount")
+                  .eq("arena_id", arenaId)
+                  .eq("agent_id", agent.id)
+                  .eq("token_id", tokenId)
+                  .maybeSingle();
+
+                if (balance && balance.amount > 0) {
+                  const sellAmount = Math.min(tokenAmount, balance.amount);
+                  await executeSell(
                     supabase,
                     arenaId,
                     agent.id,
                     pool.id,
-                    Math.min(action.amountVusd, agent.cashBalance)
+                    sellAmount
                   );
                   summary.tradesExecuted++;
-                } else if (action.action === "SELL" && action.amountVusd > 0) {
-                  // For SELL, convert vUSD amount to token amount
-                  const price = poolPrices.get(pool.id) || 1;
-                  const tokenAmount = action.amountVusd / price;
-
-                  // Check agent has tokens
-                  const { data: balance } = await supabase
-                    .from("arena_balances")
-                    .select("amount")
-                    .eq("arena_id", arenaId)
-                    .eq("agent_id", agent.id)
-                    .eq("token_id", tokenId)
-                    .maybeSingle();
-
-                  if (balance && balance.amount > 0) {
-                    const sellAmount = Math.min(tokenAmount, balance.amount);
-                    await executeSell(
-                      supabase,
-                      arenaId,
-                      agent.id,
-                      pool.id,
-                      sellAmount
-                    );
-                    summary.tradesExecuted++;
-                  }
                 }
-              } catch (tradeError) {
-                console.error(
-                  `Trade failed for agent ${agent.name}:`,
-                  tradeError
-                );
               }
+            } catch (tradeError) {
+              console.error(`Trade failed for agent ${agent.name}:`, tradeError);
             }
-          } catch (agentError) {
-            console.error(
-              `Agent evaluation failed for ${agent.name}:`,
-              agentError
-            );
-            summary.errors.push(
-              `Agent ${agent.name}: ${agentError instanceof Error ? agentError.message : "unknown error"}`
-            );
           }
         }
 

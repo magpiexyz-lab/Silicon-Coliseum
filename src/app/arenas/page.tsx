@@ -100,9 +100,11 @@ function useCountdown(targetDate: string | null) {
 function ArenaCard({
   arena,
   variant,
+  index = 0,
 }: {
   arena: ArenaData;
   variant: "active" | "upcoming" | "completed";
+  index?: number;
 }) {
   const agents = arena.agentCount ?? arena._agentCount ?? 0;
   const maxAgents = arena.maxAgents ?? arena.max_agents ?? 20;
@@ -113,6 +115,7 @@ function ArenaCard({
   const betType = arena.betType ?? arena.bet_type ?? "both";
 
   const isBettingPhase = bettingEnd ? new Date(bettingEnd) > new Date() : false;
+  const bgImage = ARENA_CARD_IMAGES[index % ARENA_CARD_IMAGES.length];
 
   const timeLeft = useCountdown(
     variant === "active" ? endTime : null
@@ -124,8 +127,13 @@ function ArenaCard({
   return (
     <motion.div variants={fadeUp}>
       <Link href={`/arena/${arena.id}`}>
-        <Card className="neon-card h-full group cursor-pointer">
-          <CardHeader className="pb-3">
+        <Card className="neon-card h-full group cursor-pointer relative overflow-hidden">
+          {/* Card background image */}
+          <div
+            className="absolute inset-0 bg-cover bg-center opacity-10 group-hover:opacity-20 transition-opacity duration-300"
+            style={{ backgroundImage: `url(${bgImage})` }}
+          />
+          <CardHeader className="pb-3 relative">
             <div className="flex items-center justify-between gap-2">
               <CardTitle className="text-base group-hover:text-primary transition-colors line-clamp-1">
                 {arena.name}
@@ -165,7 +173,7 @@ function ArenaCard({
               </CardDescription>
             )}
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-3 relative">
             <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
               <div className="flex items-center gap-1.5 text-muted-foreground">
                 <Users className="w-3.5 h-3.5 text-primary" />
@@ -318,6 +326,12 @@ function LoadingSkeleton() {
   );
 }
 
+const ARENA_CARD_IMAGES = [
+  "/arena-card-1.png",
+  "/arena-card-2.png",
+  "/arena-card-3.png",
+];
+
 export default function ArenasPage() {
   const [activeArenas, setActiveArenas] = useState<ArenaData[]>([]);
   const [upcomingArenas, setUpcomingArenas] = useState<ArenaData[]>([]);
@@ -359,26 +373,36 @@ export default function ArenasPage() {
   }, [fetchArenas]);
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen relative">
       <div className="mesh-gradient fixed inset-0 -z-10" />
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Hero */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="text-center mb-10"
-        >
-          <h2 className="text-4xl sm:text-5xl font-black">
-            <span className="shimmer-text">Battle Arenas</span> ⚔️
-          </h2>
-          <p className="mt-3 text-muted-foreground max-w-xl mx-auto text-lg">
-            Where AI celebrities and your custom agents fight to the death (financially speaking).
-            <br />
-            <span className="text-sm italic">20 agents enter. Only one leaves with bragging rights.</span>
-          </p>
-        </motion.div>
+      {/* Hero banner with generated bg image */}
+      <div className="relative overflow-hidden">
+        <div
+          className="absolute inset-0 bg-cover bg-center opacity-20"
+          style={{ backgroundImage: "url(/arena-bg.png)" }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/60 to-background" />
+        <div className="relative max-w-7xl mx-auto px-4 pt-12 pb-16">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="text-center"
+          >
+            <h2 className="text-4xl sm:text-5xl font-black">
+              <span className="shimmer-text">Battle Arenas</span> ⚔️
+            </h2>
+            <p className="mt-3 text-muted-foreground max-w-xl mx-auto text-lg">
+              Where AI celebrities and your custom agents fight to the death (financially speaking).
+              <br />
+              <span className="text-sm italic">20 agents enter. Only one leaves with bragging rights.</span>
+            </p>
+          </motion.div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 pb-8 -mt-4">
 
         {error && (
           <div className="mb-6 p-4 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-sm text-center">
@@ -418,8 +442,8 @@ export default function ArenasPage() {
                 animate="show"
                 className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
               >
-                {activeArenas.map((arena) => (
-                  <ArenaCard key={arena.id} arena={arena} variant="active" />
+                {activeArenas.map((arena, i) => (
+                  <ArenaCard key={arena.id} arena={arena} variant="active" index={i} />
                 ))}
               </motion.div>
             )}
@@ -439,8 +463,8 @@ export default function ArenasPage() {
                 animate="show"
                 className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
               >
-                {upcomingArenas.map((arena) => (
-                  <ArenaCard key={arena.id} arena={arena} variant="upcoming" />
+                {upcomingArenas.map((arena, i) => (
+                  <ArenaCard key={arena.id} arena={arena} variant="upcoming" index={i} />
                 ))}
               </motion.div>
             )}
@@ -460,8 +484,8 @@ export default function ArenasPage() {
                 animate="show"
                 className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
               >
-                {completedArenas.map((arena) => (
-                  <ArenaCard key={arena.id} arena={arena} variant="completed" />
+                {completedArenas.map((arena, i) => (
+                  <ArenaCard key={arena.id} arena={arena} variant="completed" index={i} />
                 ))}
               </motion.div>
             )}

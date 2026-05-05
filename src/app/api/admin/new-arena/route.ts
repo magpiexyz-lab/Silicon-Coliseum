@@ -47,17 +47,36 @@ export async function POST(request: NextRequest) {
 
     // Parse optional body
     let arenaName = "The Silicon Showdown";
-    let durationDays = 7;
-    let bettingPhaseDays = 1; // 24h betting phase by default
+    let bettingPhaseHours = 12; // minimum 12 hours betting phase
+    let tradingPhaseHours = 2; // max 2 hours trading phase
     let betType: "cp_only" | "sol_only" | "both" = "both";
     try {
       const body = await request.json();
       if (body.name) arenaName = body.name;
-      if (body.durationDays) durationDays = body.durationDays;
-      if (body.bettingPhaseDays !== undefined) bettingPhaseDays = body.bettingPhaseDays;
+      if (body.bettingPhaseHours !== undefined) bettingPhaseHours = Math.max(12, body.bettingPhaseHours);
+      if (body.tradingPhaseHours !== undefined) tradingPhaseHours = Math.min(2, body.tradingPhaseHours);
       if (body.betType) betType = body.betType;
     } catch {
       // no body, use defaults
+    }
+
+    // Rule: Max 2 arenas can be in trading phase in a day
+    const { data: tradingArenas } = await supabase
+      .from("arenas")
+      .select("id, betting_phase_end")
+      .eq("status", "active");
+
+    const now = new Date();
+    const arenasCurrentlyTrading = (tradingArenas || []).filter((a) => {
+      if (!a.betting_phase_end) return false;
+      return new Date(a.betting_phase_end) <= now;
+    });
+
+    if (arenasCurrentlyTrading.length >= 2) {
+      return NextResponse.json(
+        { error: "Max 2 arenas can be in trading phase at a time. Wait for one to finish." },
+        { status: 400 }
+      );
     }
 
     // Get vUSD base currency
@@ -104,16 +123,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create new arena
+    // Create new arena: betting phase (12h+) then trading phase (max 2h)
     const startTime = new Date();
-    const endTime = new Date(startTime.getTime() + durationDays * 24 * 60 * 60 * 1000);
-    const bettingPhaseEnd = new Date(startTime.getTime() + bettingPhaseDays * 24 * 60 * 60 * 1000);
+    const bettingPhaseEnd = new Date(startTime.getTime() + bettingPhaseHours * 60 * 60 * 1000);
+    const endTime = new Date(bettingPhaseEnd.getTime() + tradingPhaseHours * 60 * 60 * 1000);
 
     const { data: newArena, error: arenaError } = await supabase
       .from("arenas")
       .insert({
         name: arenaName,
-        description: `Celebrity AI agents battle it out trading real-world assets! ${durationDays} days of pure chaos.`,
+        description: `Celebrity AI agents battle it out trading real-world assets! ${bettingPhaseHours}h betting + ${tradingPhaseHours}h trading.`,
         status: "active",
         starting_balance: 100000,
         max_agents: 20,
@@ -135,7 +154,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    log.push(`Created arena: "${arenaName}" (${durationDays} days)`);
+    log.push(`Created arena: "${arenaName}" (${bettingPhaseHours}h betting + ${tradingPhaseHours}h trading)`);
 
     // Create on-chain arena escrow for SOL bets
     if (

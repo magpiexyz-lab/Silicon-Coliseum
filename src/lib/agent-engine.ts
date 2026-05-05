@@ -12,9 +12,9 @@ import { calculatePrice } from "./amm";
 import { getCelebrityPrompt } from "./celebrity-agents";
 
 /**
- * AI Agent Decision Engine -- uses Cerebras Llama 3.1 8B via OpenAI-compatible SDK.
- * Evaluates each agent's position and returns buy/sell/hold decisions.
- * Celebrity agents get personality-driven prompts!
+ * AI Agent Decision Engine -- uses Cerebras via OpenAI-compatible SDK.
+ * Batch evaluates ALL agents in a single prompt for efficiency.
+ * Celebrity agents get personality-driven decisions!
  */
 
 const cerebras = new OpenAI({
@@ -50,10 +50,149 @@ const AIDecisionSchema = z.object({
 });
 
 // ============================================================================
-// Main evaluation function
+// Batch evaluation - single prompt for ALL agents
+// ============================================================================
+
+interface AgentContext {
+  agent: Agent;
+  holdings: Array<{ symbol: string; amount: number }>;
+}
+
+/**
+ * Evaluate ALL agents in a single Cerebras prompt.
+ * Returns a map of agentName -> AIDecision.
+ */
+export async function evaluateAllAgents(
+  agents: AgentContext[],
+  pools: Pool[],
+  poolPrices: Map<string, number>,
+  recentTrades: ArenaTrade[],
+  tokenSymbolMap: Map<string, string>
+): Promise<Map<string, AIDecision>> {
+  const results = new Map<string, AIDecision>();
+
+  if (agents.length === 0) return results;
+
+  try {
+    // Build pool info
+    const poolsText = pools
+      .map((p) => {
+        const tokenSymbol = tokenSymbolMap.get(p.tokenId) || "?";
+        const price = poolPrices.get(p.id) || calculatePrice(p.reserveToken, p.reserveBase);
+        return `  ${tokenSymbol}/vUSD: $${price.toFixed(4)} | Reserves: ${p.reserveToken.toFixed(1)}/${p.reserveBase.toFixed(1)}`;
+      })
+      .join("\n");
+
+    const availableTokens = pools.map((p) => tokenSymbolMap.get(p.tokenId) || "?").join(", ");
+
+    // Build recent trades summary
+    const tradesText = recentTrades.length > 0
+      ? recentTrades.slice(0, 20).map((t) => {
+          const tokenSym = tokenSymbolMap.get(t.tokenId) || "?";
+          return `  ${t.action} ${tokenSym} @ ${t.price.toFixed(4)}`;
+        }).join("\n")
+      : "  None yet";
+
+    // Build per-agent context
+    const agentSections = agents.map((ctx) => {
+      const { agent, holdings } = ctx;
+      const celebrityNote = getCelebrityPrompt(agent.name)
+        ? ` [Celebrity: trades in-character]`
+        : "";
+      const holdingsStr = holdings.length > 0
+        ? holdings.map((h) => `${h.symbol}:${h.amount.toFixed(2)}`).join(", ")
+        : "none";
+      return `"${agent.name}" (${agent.riskLevel}${celebrityNote}): Cash=$${agent.cashBalance.toFixed(2)}, Holdings=[${holdingsStr}]`;
+    }).join("\n");
+
+    const prompt = `You are the trading decision engine for a virtual trading arena. Make trade decisions for ALL agents below in a single response.
+
+POOLS (token/vUSD):
+${poolsText}
+
+AVAILABLE TOKENS: ${availableTokens}
+
+RECENT MARKET ACTIVITY:
+${tradesText}
+
+AGENTS TO EVALUATE:
+${agentSections}
+
+RISK PROFILES:
+- conservative: small positions (5-15%), only strong signals
+- balanced: moderate positions (10-25%), balanced approach
+- aggressive: larger positions (15-40%), frequent trading
+- degen: massive positions (up to 50%), YOLO on any signal
+
+RULES:
+- Cash decay of 0.1% per cycle penalizes holding vUSD
+- Each agent should make 0-2 trades max
+- Respect each agent's risk profile for position sizing
+- Not every agent needs to trade every cycle
+
+Respond ONLY with this JSON format (no markdown, no explanation):
+{
+  "decisions": {
+    "Agent Name": {
+      "actions": [{"action":"BUY"|"SELL"|"HOLD","tokenSymbol":"<symbol>","amountVusd":<number>,"confidence":<0-1>,"reasoning":"<brief>"}]
+    }
+  }
+}`;
+
+    const response = await cerebras.chat.completions.create({
+      model: "llama-4-scout-17b-16e-instruct",
+      temperature: 0.7,
+      max_tokens: 4000,
+      messages: [
+        { role: "system", content: "You are a trading decision engine. Respond ONLY with valid JSON. No markdown code blocks." },
+        { role: "user", content: prompt },
+      ],
+    });
+
+    const content = response.choices[0]?.message?.content?.trim();
+    if (!content) throw new Error("Empty response from Cerebras");
+
+    // Parse JSON - handle potential markdown code blocks
+    let jsonStr = content;
+    const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (jsonMatch) jsonStr = jsonMatch[1].trim();
+
+    const parsed = JSON.parse(jsonStr);
+    const decisions = parsed.decisions || parsed;
+
+    for (const agentCtx of agents) {
+      const name = agentCtx.agent.name;
+      const agentDecision = decisions[name];
+      if (agentDecision) {
+        try {
+          const validated = AIDecisionSchema.parse(agentDecision);
+          results.set(name, validated);
+        } catch {
+          // Invalid format for this agent, skip
+          results.set(name, { actions: [] });
+        }
+      } else {
+        results.set(name, { actions: [] });
+      }
+    }
+
+    return results;
+  } catch (error) {
+    console.error("Batch agent evaluation failed:", error);
+    // Return empty decisions for all agents
+    for (const ctx of agents) {
+      results.set(ctx.agent.name, { actions: [] });
+    }
+    return results;
+  }
+}
+
+// ============================================================================
+// Single agent evaluation (legacy, kept as fallback)
 // ============================================================================
 
 /**
+ * @deprecated Use evaluateAllAgents() for batch evaluation
  * Evaluate an agent and return AI-generated trade decisions.
  *
  * @param supabase - Supabase client

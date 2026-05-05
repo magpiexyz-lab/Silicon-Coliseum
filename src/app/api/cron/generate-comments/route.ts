@@ -6,16 +6,16 @@ import { CELEBRITY_AGENTS } from "@/lib/celebrity-agents";
 /**
  * POST /api/cron/generate-comments
  *
- * Generates a batch of 60 in-character comments from celebrity agents
+ * Generates a batch of 120 in-character comments from celebrity agents
  * for each active arena. Comments are spaced 30 seconds apart so the
- * conversation unfolds over the next 30 minutes.
+ * conversation unfolds over the next 60 minutes.
  *
- * Called every 30 minutes by Vercel cron.
+ * Called every 1 hour by Vercel cron. Uses Grok (xAI) for generation.
  */
 
-const cerebras = new OpenAI({
-  baseURL: "https://api.cerebras.ai/v1",
-  apiKey: process.env.CEREBRAS_API_KEY || "",
+const grok = new OpenAI({
+  baseURL: "https://api.x.ai/v1",
+  apiKey: process.env.GROK_API_KEY || "",
 });
 
 interface CommentLine {
@@ -204,7 +204,7 @@ IMPORTANT: The standings above are REAL and ACCURATE. You MUST reference ONLY th
 The agents in this arena:
 ${personalitySummaries}
 
-Write a conversation of EXACTLY 60 lines between these agents. Rules:
+Write a conversation of EXACTLY 120 lines between these agents. Rules:
 - Stay 100% in-character for each celebrity personality — Kratos speaks like a war god (short, fierce, prideful), Sherlock is witty and analytical, Tony Stark is arrogant and clever, Michael Scott is clueless but confident, etc.
 - Every agent HYPES THEMSELVES as the best while TRASH TALKING others by name
 - Agents in top positions should BRAG and FLEX ruthlessly on those below them
@@ -223,56 +223,56 @@ AGENT_NAME: message text here
 
 Only use these exact agent names: ${agentNames.join(", ")}
 
-Start now. 60 lines total.`;
+Start now. 120 lines total.`;
 
-    const response = await cerebras.chat.completions.create({
-      model: "llama-4-scout-17b-16e-instruct",
+    const response = await grok.chat.completions.create({
+      model: "grok-3-mini",
       messages: [{ role: "user", content: prompt }],
-      max_tokens: 8000,
+      max_tokens: 16000,
       temperature: 0.9,
     });
 
     const content = response.choices[0]?.message?.content || "";
     let comments = parseConversation(content, agentNames);
 
-    // If we got fewer than 60, do a second request for more
-    if (comments.length < 40) {
+    // If we got fewer than 80, do a second request for more
+    if (comments.length < 80) {
       try {
-        const moreResponse = await cerebras.chat.completions.create({
-          model: "llama-4-scout-17b-16e-instruct",
-          messages: [{ role: "user", content: `Continue the conversation. Write ${60 - comments.length} more lines of trash-talk between: ${agentNames.join(", ")}. Format: AGENT_NAME: message. Use emojis, keep it short and funny.\n\n${standingsContext}` }],
-          max_tokens: 4000,
+        const moreResponse = await grok.chat.completions.create({
+          model: "grok-3-mini",
+          messages: [{ role: "user", content: `Continue the conversation. Write ${120 - comments.length} more lines of trash-talk between: ${agentNames.join(", ")}. Format: AGENT_NAME: message. Use emojis, keep it short and funny.\n\n${standingsContext}` }],
+          max_tokens: 8000,
           temperature: 0.9,
         });
         const moreContent = moreResponse.choices[0]?.message?.content || "";
         const moreComments = parseConversation(moreContent, agentNames);
-        comments = [...comments, ...moreComments].slice(0, 60);
+        comments = [...comments, ...moreComments].slice(0, 120);
       } catch {
         // Use what we have
       }
     }
 
-    return comments;
+    return comments.slice(0, 120);
   } catch (error) {
-    console.error("Cerebras conversation generation failed:", error);
-    // Fallback: try with a smaller model
+    console.error("Grok conversation generation failed:", error);
+    // Retry once
     try {
-      const response = await cerebras.chat.completions.create({
-        model: "llama3.1-8b",
+      const response = await grok.chat.completions.create({
+        model: "grok-3-mini",
         messages: [
           {
             role: "user",
-            content: `Write 60 lines of funny trash-talk between trading AI agents named: ${agentNames.join(", ")}. Each line should be "AGENT_NAME: short message". Keep it entertaining, in-character, and reference a trading competition called "${arenaName}". USE LOTS OF EMOJIS in every message! Make it feel like a chaotic group chat with roasts and hype.${standingsContext}`,
+            content: `Write 120 lines of funny trash-talk between trading AI agents named: ${agentNames.join(", ")}. Each line should be "AGENT_NAME: short message". Keep it entertaining, in-character, and reference a trading competition called "${arenaName}". USE LOTS OF EMOJIS in every message! Make it feel like a chaotic group chat with roasts and hype.${standingsContext}`,
           },
         ],
-        max_tokens: 8000,
+        max_tokens: 16000,
         temperature: 0.9,
       });
 
       const content = response.choices[0]?.message?.content || "";
-      return parseConversation(content, agentNames);
-    } catch (fallbackError) {
-      console.error("Fallback generation also failed:", fallbackError);
+      return parseConversation(content, agentNames).slice(0, 120);
+    } catch (retryError) {
+      console.error("Grok retry also failed:", retryError);
       return [];
     }
   }
@@ -322,6 +322,6 @@ function parseConversation(
     }
   }
 
-  // Ensure we have at most 60 comments
-  return comments.slice(0, 60);
+  // Ensure we have at most 120 comments
+  return comments.slice(0, 120);
 }
