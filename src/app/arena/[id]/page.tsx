@@ -1499,6 +1499,13 @@ export default function ArenaDetailPage() {
                     </TableBody>
                   </Table>
                 </div>
+                {myBets.some((b) => b.status === "won" && b.betCurrency === "sol") && (
+                  <p className="text-sm text-primary mt-4 text-center font-medium">
+                    You have won SOL bets! Navigate to your{" "}
+                    <Link href="/dashboard" className="underline font-bold">Dashboard</Link>{" "}
+                    to claim your SOL rewards.
+                  </p>
+                )}
               </CardContent>
             </Card>
           </motion.div>
@@ -1520,7 +1527,9 @@ export default function ArenaDetailPage() {
               </CardHeader>
               <CardContent className="space-y-3">
                 <p className="text-sm text-muted-foreground">
-                  You have unclaimed SOL rewards from this arena. Connect your wallet to claim.
+                  You have unclaimed SOL rewards from this arena. Connect your wallet to claim here, or visit your{" "}
+                  <Link href="/dashboard" className="text-primary font-medium hover:underline">Dashboard</Link>{" "}
+                  to see all pending rewards.
                 </p>
                 {solRewards.map((reward) => (
                   <div

@@ -13,6 +13,7 @@ import {
   BarChart3,
   Users,
   ArrowRight,
+  Gift,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,6 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import PnlDisplay from "@/components/pnl-display";
+import { ClaimRewardsButton } from "@/components/claim-rewards-button";
 
 interface UserProfile {
   username: string;
@@ -55,11 +57,22 @@ interface ArenaHistoryEntry {
   cpEarned: number;
 }
 
+interface PendingSolReward {
+  id: string;
+  arenaId: string;
+  arenaName: string;
+  rewardType: string; // "performer" or "bettor"
+  solAmount: number; // in lamports
+  walletAddress: string;
+  createdAt: string;
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [activeAgents, setActiveAgents] = useState<ActiveArenaAgent[]>([]);
   const [history, setHistory] = useState<ArenaHistoryEntry[]>([]);
+  const [solRewards, setSolRewards] = useState<PendingSolReward[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showWelcome, setShowWelcome] = useState(false);
@@ -115,6 +128,17 @@ export default function DashboardPage() {
         if (historyRes.ok) {
           const historyData = await historyRes.json();
           setHistory(historyData.history || []);
+        }
+      } catch {
+        /* optional */
+      }
+
+      // Fetch pending SOL rewards
+      try {
+        const rewardsRes = await fetch("/api/user/rewards");
+        if (rewardsRes.ok) {
+          const rewardsData = await rewardsRes.json();
+          setSolRewards(rewardsData.rewards || []);
         }
       } catch {
         /* optional */
@@ -292,6 +316,62 @@ export default function DashboardPage() {
                     </p>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
+        {/* Pending SOL Rewards */}
+        {solRewards.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.08, duration: 0.5 }}
+          >
+            <Card className="neon-card border-primary/40">
+              <CardHeader>
+                <CardTitle className="text-lg font-black flex items-center gap-2">
+                  <Gift className="w-5 h-5 text-primary" />
+                  Claim Your SOL Rewards
+                </CardTitle>
+                <CardDescription>
+                  You have unclaimed SOL from arena bets and performance rewards. Connect your wallet to claim.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {solRewards.map((reward) => (
+                  <div
+                    key={reward.id}
+                    className="flex items-center justify-between glass rounded-lg p-4"
+                  >
+                    <div className="space-y-1">
+                      <p className="font-medium text-sm">
+                        {reward.rewardType === "performer"
+                          ? "Agent Performance Reward"
+                          : "Winning Bet Payout"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        From: <Link href={`/arena/${reward.arenaId}/results`} className="text-primary hover:underline">{reward.arenaName}</Link>
+                      </p>
+                      <p className="text-lg font-bold text-primary">
+                        {(reward.solAmount / 1_000_000_000).toFixed(4)} SOL
+                      </p>
+                    </div>
+                    <ClaimRewardsButton
+                      arenaId={reward.arenaId}
+                      rewardLamports={reward.solAmount}
+                      rewardId={reward.id}
+                      onClaimed={() => {
+                        setSolRewards((prev) =>
+                          prev.filter((r) => r.id !== reward.id)
+                        );
+                      }}
+                    />
+                  </div>
+                ))}
+                <p className="text-xs text-muted-foreground text-center pt-2">
+                  Total unclaimed: {(solRewards.reduce((sum, r) => sum + r.solAmount, 0) / 1_000_000_000).toFixed(4)} SOL
+                </p>
               </CardContent>
             </Card>
           </motion.div>
