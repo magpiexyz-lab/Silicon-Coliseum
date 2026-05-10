@@ -8,6 +8,7 @@ const CreateAgentSchema = z.object({
   name: z.string().min(1).max(50),
   riskLevel: z.enum(["conservative", "balanced", "aggressive", "degen"]),
   strategyDescription: z.string().max(500).optional(),
+  payoutWallet: z.string().min(32).max(44).optional(),
 });
 
 const UpdateAgentSchema = z.object({
@@ -130,7 +131,7 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
     if (user) userId = user.id;
 
-    const { name, riskLevel, strategyDescription } = parsed.data;
+    const { name, riskLevel, strategyDescription, payoutWallet } = parsed.data;
 
     // Create agent without an arena
     const { data: agent, error } = await supabase
@@ -141,6 +142,7 @@ export async function POST(request: NextRequest) {
         name,
         risk_level: riskLevel,
         strategy_description: strategyDescription || null,
+        payout_wallet: payoutWallet || null,
         cash_balance: 0,
         status: "active",
       })

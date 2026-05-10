@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/card";
 import InteractiveParticles from "@/components/interactive-particles";
 import { ClaimCpDialog } from "@/components/claim-cp-dialog";
+import { trackEvent } from "@/lib/analytics";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -58,6 +59,14 @@ export default function SignupPage() {
 
       if (res.ok) {
         setSuccess(true);
+        // Track signup completion with gclid if available
+        let gclid: string | null = null;
+        try { gclid = sessionStorage.getItem("gclid"); } catch {}
+        trackEvent("signup_complete", {
+          funnel_stage: "demand",
+          method: "email",
+          ...(gclid ? { gclid } : {}),
+        });
         // Don't show claim dialog — user needs to confirm email first
       } else {
         setError(data.error || "Registration failed. Please try again.");

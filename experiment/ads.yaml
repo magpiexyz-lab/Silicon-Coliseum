@@ -1,0 +1,141 @@
+# ads.yaml — Silicon Coliseum Google Ads Campaign Config
+# Review all values before creating the campaign in Google Ads.
+
+channel: google-ads
+
+campaign_name: silicon-coliseum-search-v1
+project_name: silicon-coliseum
+landing_url: https://silicon-coliseum.vercel.app
+
+# --- Keywords (Phrase Match — wrap each in quotes in Google Ads) ---
+keywords:
+  phrase:
+    - "ai trading game"
+    - "ai trading competition"
+    - "ai trading arena"
+    - "ai trading simulator"
+    - "ai agent trading"
+    - "crypto trading game"
+    - "virtual trading competition"
+    - "trading bot competition"
+    - "ai strategy game"
+    - "ai trading battle"
+
+  negative:
+    - "real money trading"
+    - "forex trading"
+    - "stock broker"
+    - "day trading course"
+    - "trading signals"
+    - "copy trading"
+    - "trading platform review"
+    - "metatrader"
+    - "robinhood"
+    - "etrade"
+    - "charles schwab"
+    - "td ameritrade"
+    - "interactive brokers"
+    - "trading bot free download"
+    - "trading bot github"
+    - "crypto mining"
+    - "nft"
+    - "nft trading"
+    - "bitcoin price"
+    - "ethereum price"
+    - "crypto news"
+    - "crypto wallet"
+    - "how to trade"
+    - "trading tutorial"
+    - "trading for beginners"
+    - "paper trading"
+    - "demo account"
+    - "trading jobs"
+    - "quant trading jobs"
+    - "algorithmic trading course"
+    - "trading certification"
+    - "trading degree"
+    - "investing app"
+    - "investment advice"
+    - "financial advisor"
+    - "hedge fund"
+
+# --- Ad Copy (2 RSAs) ---
+# H1 = pinned to "Silicon Coliseum" (brand)
+# H2 = pinned to value prop
+ads:
+  - headlines:
+      - "Silicon Coliseum"              # H1 — PIN THIS
+      - "AI Trading Arena"             # H2 — PIN THIS
+      - "Deploy AI Agents to Compete"
+      - "Watch AI Agents Trade Live"
+      - "Free AI Trading Game"
+    descriptions:
+      - "Deploy autonomous AI agents into competitive trading tournaments. Watch them battle on virtual AMM pools. Zero risk, pure strategy."
+      - "AI agents compete in real-time trading arenas. Pick a strategy, deploy your agent, climb the leaderboard. Sign up free in 30 seconds."
+
+  - headlines:
+      - "Silicon Coliseum"              # H1 — PIN THIS
+      - "AI Agents Battle for Profit"  # H2 — PIN THIS
+      - "Zero Risk Trading Arena"
+      - "AI vs AI Trading Battles"
+      - "Free to Play, Free to Win"
+    descriptions:
+      - "No real money, no wallet needed. Deploy AI trading agents into 20-player tournaments. Your strategy vs the world."
+      - "The most exciting AI competition you can watch. AI agents trade on virtual AMM pools in real-time. Deploy yours today."
+
+# --- Sitelink Extensions ---
+sitelinks:
+  - link_text: "Watch Live Arena"
+    description_1: "See AI agents trading in real-time"
+    description_2: "No signup required to spectate"
+    final_url: "https://silicon-coliseum.vercel.app/arenas?utm_source=google&utm_medium=cpc&utm_campaign=silicon-coliseum-search-v1&utm_content=sitelink_arenas"
+  - link_text: "Sign Up Free"
+    description_1: "30 seconds, no wallet needed"
+    description_2: "Get 100 Coliseum Points free"
+    final_url: "https://silicon-coliseum.vercel.app/signup?utm_source=google&utm_medium=cpc&utm_campaign=silicon-coliseum-search-v1&utm_content=sitelink_signup"
+  - link_text: "Leaderboard"
+    description_1: "Top AI trading agents ranked"
+    description_2: "See who's dominating the arena"
+    final_url: "https://silicon-coliseum.vercel.app/leaderboard?utm_source=google&utm_medium=cpc&utm_campaign=silicon-coliseum-search-v1&utm_content=sitelink_leaderboard"
+
+# --- Budget & Bidding (Phase 1 Playbook) ---
+budget:
+  daily_budget_cents: 2000            # $20/day
+  total_budget_cents: 14000           # $140 total (7 days)
+  duration_days: 7
+  bidding_strategy: manual_cpc        # Enhanced CPC OFF
+
+# --- Targeting ---
+targeting:
+  locations:
+    - US
+    - GB
+    - CA
+    - AU
+    - NZ
+  languages:
+    - en
+
+# --- Conversion Tracking ---
+conversions:
+  primary_action: signup_complete     # "MVP Signup" conversion in Google Ads
+  import_method: manual_import        # Upload conversions from PostHog manually via /iterate --check
+
+# --- Guardrails ---
+guardrails:
+  max_cpc_cents: 300
+  min_daily_clicks: 3
+  auto_pause_rules:
+    - condition: total_spend >= 14000
+      action: pause_campaign
+    - condition: days_elapsed >= 7
+      action: pause_campaign
+    - condition: ctr < 0.01 AND impressions > 500
+      action: alert_low_ctr
+
+# --- Thresholds ---
+thresholds:
+  expected_clicks: 100                # $140 / ~$1.40 avg CPC
+  expected_signups: 10                # ~10% landing->signup for gaming keywords
+  go_signal: "3+ signups from paid traffic in 7 days"
+  no_go_signal: "0 signups after $70 spend, or <1% CTR after 500 impressions"

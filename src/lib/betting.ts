@@ -105,12 +105,13 @@ export async function resolveBets(
 ): Promise<void> {
   const top3Ids = new Set(topAgentIds.slice(0, 3));
 
-  // Fetch all pending bets for this arena
+  // Fetch all pending CP bets for this arena (skip SOL bets — handled by resolveSolBets)
   const { data: bets, error: betsError } = await supabase
     .from("bets")
     .select("*")
     .eq("arena_id", arenaId)
-    .eq("status", "pending");
+    .eq("status", "pending")
+    .or("bet_currency.eq.cp,bet_currency.is.null");
 
   if (betsError || !bets || bets.length === 0) return;
 
@@ -270,8 +271,11 @@ export async function resolveSolBets(
   // 1st: 50%, 2nd: 25%, 3rd: 20%, 5% fee
   const performerDistribution = [0.5, 0.25, 0.2];
   const feeRate = 0.05;
-  const feeAmount = Math.floor(performerPool * feeRate);
+  let feeAmount = Math.floor(performerPool * feeRate);
   const performerRewards: { userId: string; walletAddress: string; amount: number }[] = [];
+
+  // Get treasury address for unclaimed performer shares
+  const treasuryAddress = process.env.NEXT_PUBLIC_TREASURY_WALLET || "";
 
   for (let i = 0; i < Math.min(topAgentIds.length, 3); i++) {
     const agentId = topAgentIds[i];
@@ -280,30 +284,39 @@ export async function resolveSolBets(
 
     const { data: agent } = await supabase
       .from("agents")
-      .select("user_id")
+      .select("user_id, payout_wallet")
       .eq("id", agentId)
       .single();
 
     if (!agent) continue;
 
-    const { data: owner } = await supabase
-      .from("users")
-      .select("id, wallet_address")
-      .eq("id", agent.user_id)
-      .single();
+    // Try agent's payout_wallet first, then owner's wallet_address
+    let walletAddress = agent.payout_wallet || null;
+    if (!walletAddress) {
+      const { data: owner } = await supabase
+        .from("users")
+        .select("wallet_address")
+        .eq("id", agent.user_id)
+        .single();
+      walletAddress = owner?.wallet_address || null;
+    }
 
-    if (!owner?.wallet_address) continue;
+    if (!walletAddress) {
+      // No wallet configured — redirect this share to treasury
+      feeAmount += share;
+      continue;
+    }
 
     performerRewards.push({
-      userId: owner.id,
-      walletAddress: owner.wallet_address,
+      userId: agent.user_id,
+      walletAddress,
       amount: share,
     });
 
     await supabase.from("sol_rewards").insert({
       arena_id: arenaId,
-      user_id: owner.id,
-      wallet_address: owner.wallet_address,
+      user_id: agent.user_id,
+      wallet_address: walletAddress,
       reward_type: "performer",
       sol_amount: share,
     });

@@ -31,6 +31,7 @@ import CursorFollower from "@/components/cursor-follower";
 import AnimatedCounter from "@/components/animated-counter";
 import AgentAvatar from "@/components/agent-avatar";
 import { useAuth } from "@/components/auth-provider";
+import { trackEvent } from "@/lib/analytics";
 
 // -- Animation variants --
 const stagger = {
@@ -460,6 +461,14 @@ function TokenTicker() {
 export default function LandingPage() {
   const heroRef = useRef(null);
   const { isLoggedIn } = useAuth();
+  const landingTracked = useRef(false);
+
+  useEffect(() => {
+    if (landingTracked.current) return;
+    landingTracked.current = true;
+    trackEvent("visit_landing", { funnel_stage: "demand" });
+  }, []);
+
   const { scrollYProgress } = useScroll({
     target: heroRef,
     offset: ["start start", "end start"],
@@ -526,7 +535,7 @@ export default function LandingPage() {
             transition={{ delay: 0.5, duration: 0.6 }}
             className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4"
           >
-            <Link href={isLoggedIn ? "/arenas" : "/signup"}>
+            <Link href={isLoggedIn ? "/arenas" : "/signup"} onClick={() => trackEvent("cta_click", { funnel_stage: "demand", cta: isLoggedIn ? "view_arenas" : "enter_the_arena" })}>
               <Button size="lg" className="rainbow-btn h-14 px-10 text-lg font-black rounded-full">
                 {isLoggedIn ? "View Arenas" : "Enter the Arena"}
                 <Swords className="w-5 h-5 ml-2" />

@@ -12,6 +12,7 @@ const EnterArenaSchema = z.object({
     .default("balanced"),
   strategyDescription: z.string().max(500).optional(),
   avatarUrl: z.string().optional(),
+  payoutWallet: z.string().min(32).max(44).optional(),
   agentId: z.string().uuid().optional(),
   quickDeploy: z.boolean().optional(),
 });
@@ -61,7 +62,7 @@ export async function POST(
       );
     }
 
-    const { riskLevel, strategyDescription, agentId, avatarUrl } = parsed.data;
+    const { riskLevel, strategyDescription, agentId, avatarUrl, payoutWallet } = parsed.data;
 
     // Look up user in users table to get internal ID
     const supabase = createServiceClient();
@@ -129,6 +130,7 @@ export async function POST(
         riskLevel,
         strategyDescription,
         avatarUrl,
+        payoutWallet,
         agentId,
       });
     } catch (enterError) {

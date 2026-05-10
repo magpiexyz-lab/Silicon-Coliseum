@@ -131,6 +131,7 @@ export async function enterArena(
     strategyDescription?: string;
     agentId?: string;
     avatarUrl?: string;
+    payoutWallet?: string;
   }
 ): Promise<Agent> {
   // Fetch arena
@@ -192,13 +193,17 @@ export async function enterArena(
     }
 
     // Update agent to point to this arena and reset cash
+    const agentUpdate: Record<string, unknown> = {
+      arena_id: arenaId,
+      cash_balance: arena.startingBalance,
+      status: "active",
+    };
+    if (agentConfig.payoutWallet) {
+      agentUpdate.payout_wallet = agentConfig.payoutWallet;
+    }
     await supabase
       .from("agents")
-      .update({
-        arena_id: arenaId,
-        cash_balance: arena.startingBalance,
-        status: "active",
-      })
+      .update(agentUpdate)
       .eq("id", agentConfig.agentId);
 
     agent = { ...existingAgent, arena_id: arenaId, cash_balance: arena.startingBalance, status: "active" };
@@ -225,6 +230,7 @@ export async function enterArena(
         risk_level: agentConfig.riskLevel,
         strategy_description: agentConfig.strategyDescription || null,
         avatar_url: agentConfig.avatarUrl || null,
+        payout_wallet: agentConfig.payoutWallet || null,
         cash_balance: arena.startingBalance,
         status: "active",
       })

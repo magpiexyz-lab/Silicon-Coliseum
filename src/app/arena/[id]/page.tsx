@@ -60,12 +60,21 @@ import {
 import RiskLevelBadge from "@/components/risk-level-badge";
 import AgentAvatar from "@/components/agent-avatar";
 import { SolBetPanel } from "@/components/sol-bet-panel";
+import { ClaimRewardsButton } from "@/components/claim-rewards-button";
 import { ArenaChat, getAgentColor, getAgentEmoji, getAgentBgColor } from "@/components/arena-chat";
 import { useArenaComments, type ChatMessage } from "@/hooks/use-arena-comments";
 import type { RiskLevel } from "@/lib/types";
 
 import { statusColors } from "@/lib/status-colors";
 import type { MyBet } from "@/lib/my-bets";
+
+interface SolReward {
+  id: string;
+  rewardType: string;
+  solAmount: number;
+  isClaimed: boolean;
+  walletAddress: string;
+}
 
 interface ArenaDetail {
   id: string;
@@ -208,6 +217,7 @@ function EnterArenaDialog({ arenaId }: { arenaId: string }) {
   const [strategy, setStrategy] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [payoutWallet, setPayoutWallet] = useState("");
   const [selectedAgentId, setSelectedAgentId] = useState("");
   const [availableAgents, setAvailableAgents] = useState<AvailableAgent[]>([]);
   const [loadingAgents, setLoadingAgents] = useState(false);
@@ -282,15 +292,22 @@ function EnterArenaDialog({ arenaId }: { arenaId: string }) {
     try {
       let body: Record<string, unknown>;
       if (mode === "existing") {
-        body = { agentId: selectedAgentId };
+        body = {
+          agentId: selectedAgentId,
+          payoutWallet: payoutWallet || undefined,
+        };
       } else if (mode === "quick") {
-        body = { quickDeploy: true };
+        body = {
+          quickDeploy: true,
+          payoutWallet: payoutWallet || undefined,
+        };
       } else {
         body = {
           name,
           riskLevel,
           strategyDescription: strategy || undefined,
           avatarUrl: avatarUrl || undefined,
+          payoutWallet: payoutWallet || undefined,
         };
       }
 
@@ -521,6 +538,25 @@ function EnterArenaDialog({ arenaId }: { arenaId: string }) {
           </Button>
         </div>
       )}
+
+      {/* Payout wallet — shown for all deploy modes */}
+      <div className="space-y-2 pt-2 border-t border-border/50">
+        <Label htmlFor="payout-wallet" className="flex items-center gap-1.5">
+          <Wallet className="w-3.5 h-3.5" />
+          Payout Wallet (optional)
+        </Label>
+        <Input
+          id="payout-wallet"
+          placeholder="Solana wallet address for SOL rewards"
+          value={payoutWallet}
+          onChange={(e) => setPayoutWallet(e.target.value)}
+          className="font-mono text-xs"
+          maxLength={44}
+        />
+        <p className="text-[10px] text-muted-foreground">
+          If your agent wins arena rewards paid in SOL, they&apos;ll be sent to this wallet.
+        </p>
+      </div>
 
       {error && (
         <div className="flex items-start gap-2 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
@@ -835,6 +871,7 @@ export default function ArenaDetailPage() {
   const [agentDetails, setAgentDetails] = useState<Record<string, AgentDetail>>({});
   const [expandedReasoning, setExpandedReasoning] = useState<string | null>(null);
   const [myBets, setMyBets] = useState<MyBet[]>([]);
+  const [solRewards, setSolRewards] = useState<SolReward[]>([]);
 
   // Shared comments hook for both chat and speech bubbles
   const { messages: chatMessages, latestByAgent, commentsByAgent } = useArenaComments(
@@ -920,12 +957,13 @@ export default function ArenaDetailPage() {
         /* pools fetch optional */
       }
 
-      // Fetch user's bets (optional, only works if logged in)
+      // Fetch user's bets and SOL rewards (optional, only works if logged in)
       try {
         const myBetsRes = await fetch(`/api/arenas/${arenaId}/my-bets`);
         if (myBetsRes.ok) {
           const myBetsData = await myBetsRes.json();
           setMyBets(myBetsData.bets || []);
+          setSolRewards(myBetsData.rewards || []);
         }
       } catch {
         /* my-bets fetch optional */
@@ -1461,6 +1499,56 @@ export default function ArenaDetailPage() {
                     </TableBody>
                   </Table>
                 </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
+        {/* Claim SOL Rewards */}
+        {solRewards.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.18, duration: 0.5 }}
+          >
+            <Card className="neon-card border-primary/40">
+              <CardHeader>
+                <CardTitle className="text-lg font-black flex items-center gap-2">
+                  <span className="text-xl">🎁</span>
+                  Claim SOL Rewards
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  You have unclaimed SOL rewards from this arena. Connect your wallet to claim.
+                </p>
+                {solRewards.map((reward) => (
+                  <div
+                    key={reward.id}
+                    className="flex items-center justify-between glass rounded-lg p-3"
+                  >
+                    <div>
+                      <p className="text-sm font-medium">
+                        {reward.rewardType === "performer"
+                          ? "Performance Reward"
+                          : "Betting Reward"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {(reward.solAmount / 1_000_000_000).toFixed(4)} SOL
+                      </p>
+                    </div>
+                    <ClaimRewardsButton
+                      arenaId={arenaId}
+                      rewardLamports={reward.solAmount}
+                      rewardId={reward.id}
+                      onClaimed={() => {
+                        setSolRewards((prev) =>
+                          prev.filter((r) => r.id !== reward.id)
+                        );
+                      }}
+                    />
+                  </div>
+                ))}
               </CardContent>
             </Card>
           </motion.div>
