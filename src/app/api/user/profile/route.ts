@@ -67,6 +67,72 @@ export async function GET(request: NextRequest) {
       .eq("user_id", user.id)
       .maybeSingle();
 
+    // Check if include params are requested
+    const url = new URL(request.url);
+    const include = url.searchParams.get("include");
+
+    // Fetch active arenas (agents in active arenas)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let activeArenas: any[] = [];
+    if (include === "active_arenas") {
+      const { data: activeEntries } = await supabase
+        .from("arena_entries")
+        .select("arena_id, agent_id, agents(id, name), arenas(id, name, status, competition_end)")
+        .eq("user_id", user.id)
+        .eq("status", "active");
+
+      if (activeEntries) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const filtered = (activeEntries as any[]).filter(
+          (e) => e.arenas?.status === "active"
+        );
+        activeArenas = await Promise.all(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          filtered.map(async (entry: any) => {
+            const { data: lb } = await supabase
+              .from("arena_results")
+              .select("final_rank, pnl_percent")
+              .eq("arena_id", entry.arena_id)
+              .eq("agent_id", entry.agent_id)
+              .maybeSingle();
+
+            return {
+              arenaId: entry.arena_id,
+              arenaName: entry.arenas?.name || "Arena",
+              agentName: entry.agents?.name || "Agent",
+              currentRank: lb?.final_rank || 0,
+              pnlPercent: lb?.pnl_percent || 0,
+              status: "active",
+            };
+          })
+        );
+      }
+    }
+
+    // Fetch arena history (completed arenas)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let history: any[] = [];
+    if (include === "history") {
+      const { data: results } = await supabase
+        .from("arena_results")
+        .select("arena_id, agent_id, final_rank, pnl_percent, reward_cp, agents(name), arenas(name)")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(20);
+
+      if (results) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        history = (results as any[]).map((r) => ({
+          arenaId: r.arena_id,
+          arenaName: r.arenas?.name || "Arena",
+          agentName: r.agents?.name || "Agent",
+          rank: r.final_rank,
+          pnlPercent: r.pnl_percent,
+          cpEarned: r.reward_cp || 0,
+        }));
+      }
+    }
+
     return NextResponse.json({
       user: {
         id: user.id,
@@ -92,6 +158,8 @@ export async function GET(request: NextRequest) {
             bestPnl: 0,
             totalTrades: 0,
           },
+      ...(include === "active_arenas" ? { activeArenas } : {}),
+      ...(include === "history" ? { history } : {}),
     });
   } catch {
     return NextResponse.json(
